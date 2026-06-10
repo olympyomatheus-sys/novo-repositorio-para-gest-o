@@ -1,0 +1,2365 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G&D Sistema – GRUPO GPS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --blue-dark: #0A2463;
+    --blue-mid: #1E4DB7;
+    --blue-light: #3A86FF;
+    --blue-pale: #D6E8FF;
+    --blue-bg: #EEF4FF;
+    --white: #FFFFFF;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9EDF5;
+    --gray-400: #9FAEC3;
+    --gray-600: #5A6E8C;
+    --gray-800: #2D3B52;
+    --green: #00C48C;
+    --red: #FF4D6A;
+    --orange: #FF9500;
+    --yellow: #FFD60A;
+    --shadow: 0 2px 12px rgba(10,36,99,0.10);
+    --shadow-lg: 0 8px 32px rgba(10,36,99,0.16);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--blue-bg); color: var(--gray-800); min-height: 100vh; }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+    background: var(--blue-dark); color: var(--white);
+    display: flex; flex-direction: column; z-index: 100;
+    box-shadow: 4px 0 16px rgba(10,36,99,0.25);
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .sidebar-logo .logo-badge {
+    background: var(--blue-light); color: #fff;
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; margin-bottom: 10px;
+  }
+  .sidebar-logo h2 { font-size: 15px; font-weight: 700; line-height: 1.3; }
+  .sidebar-logo p { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 20px; cursor: pointer;
+    font-size: 13.5px; font-weight: 500;
+    transition: background 0.15s, padding-left 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.07); }
+  .nav-item.active { background: rgba(58,134,255,0.2); border-left-color: var(--blue-light); color: var(--blue-pale); }
+  .nav-item svg { opacity: 0.8; flex-shrink: 0; }
+  .nav-section { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; color: rgba(255,255,255,0.35); padding: 14px 20px 4px; text-transform: uppercase; }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.5); }
+
+  /* ─── MAIN ─── */
+  .main { margin-left: 240px; min-height: 100vh; }
+  .topbar {
+    background: var(--white); border-bottom: 1px solid var(--gray-200);
+    padding: 0 28px; height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .topbar-title { font-size: 17px; font-weight: 700; color: var(--blue-dark); }
+  .topbar-badge { background: var(--blue-pale); color: var(--blue-mid); font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--blue-mid); color: #fff; }
+  .btn-primary:hover { background: var(--blue-dark); }
+  .btn-outline { background: transparent; color: var(--blue-mid); border: 1.5px solid var(--blue-mid); }
+  .btn-outline:hover { background: var(--blue-pale); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-success { background: var(--green); color: #fff; }
+
+  .content { padding: 24px 28px; }
+
+  /* ─── VIEWS ─── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ─── CARDS ROW ─── */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 18px 20px; box-shadow: var(--shadow);
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+    border-left: 4px solid transparent; position: relative; overflow: hidden;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .card.active-filter { border: 2px solid var(--blue-light); box-shadow: 0 0 0 3px rgba(58,134,255,0.18); }
+  .card::before { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 50%; opacity: 0.08; transform: translate(20px,-20px); }
+  .card-blue { border-left-color: var(--blue-mid); } .card-blue::before { background: var(--blue-mid); }
+  .card-green { border-left-color: var(--green); } .card-green::before { background: var(--green); }
+  .card-red { border-left-color: var(--red); } .card-red::before { background: var(--red); }
+  .card-orange { border-left-color: var(--orange); } .card-orange::before { background: var(--orange); }
+  .card-yellow { border-left-color: var(--yellow); } .card-yellow::before { background: var(--yellow); }
+  .card-label { font-size: 11.5px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .card-value { font-size: 32px; font-weight: 800; color: var(--blue-dark); line-height: 1; }
+  .card-sub { font-size: 11px; color: var(--gray-400); margin-top: 6px; }
+  .card-icon { position: absolute; top: 16px; right: 16px; opacity: 0.15; font-size: 28px; }
+
+  /* ─── CHARTS ─── */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .chart-card { background: var(--white); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+  .chart-title { font-size: 14px; font-weight: 700; color: var(--blue-dark); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* ─── FILTERS ─── */
+  .filters-bar {
+    background: var(--white); border-radius: var(--radius);
+    padding: 16px 20px; box-shadow: var(--shadow); margin-bottom: 20px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-label { font-size: 11px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.4px; }
+  .filter-input, .filter-select {
+    background: var(--gray-100); border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius-sm); padding: 7px 12px;
+    font-size: 13px; color: var(--gray-800); min-width: 130px;
+    transition: border 0.15s; outline: none;
+  }
+  .filter-input:focus, .filter-select:focus { border-color: var(--blue-light); background: #fff; }
+  .period-btns { display: flex; gap: 4px; }
+  .period-btn {
+    padding: 7px 12px; border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1.5px solid var(--gray-200); background: var(--gray-100); color: var(--gray-600);
+    transition: all 0.15s;
+  }
+  .period-btn.active { background: var(--blue-mid); color: #fff; border-color: var(--blue-mid); }
+  .period-btn:hover:not(.active) { border-color: var(--blue-light); color: var(--blue-mid); }
+  .custom-date-range { display: none; gap: 8px; align-items: center; }
+  .custom-date-range.visible { display: flex; }
+
+  /* ─── TABLE ─── */
+  .table-wrap { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .table-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--gray-200); }
+  .table-title { font-size: 14px; font-weight: 700; color: var(--blue-dark); }
+  .table-count { font-size: 12px; color: var(--gray-600); background: var(--blue-pale); padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .table-scroll { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--blue-dark); color: var(--white); padding: 11px 14px; font-size: 11.5px; font-weight: 700; text-align: left; position: sticky; top: 0; letter-spacing: 0.4px; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--gray-200); transition: background 0.1s; }
+  tbody tr:hover { background: var(--blue-bg); }
+  tbody td { padding: 10px 14px; vertical-align: middle; white-space: nowrap; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+  }
+  .badge-green { background: #E6FAF4; color: var(--green); }
+  .badge-red { background: #FFF0F2; color: var(--red); }
+  .badge-orange { background: #FFF5E8; color: var(--orange); }
+  .badge-blue { background: var(--blue-pale); color: var(--blue-mid); }
+  .badge-gray { background: var(--gray-200); color: var(--gray-600); }
+  .docs-compact {
+    display: inline-flex; align-items: center; gap: 4px;
+    cursor: pointer; position: relative;
+  }
+  .docs-pill {
+    background: var(--orange); color: #fff; border-radius: 20px;
+    padding: 2px 8px; font-size: 11px; font-weight: 700;
+  }
+  .docs-tooltip {
+    display: none; position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%); background: var(--gray-800); color: #fff;
+    padding: 8px 12px; border-radius: var(--radius-sm); font-size: 11.5px;
+    white-space: nowrap; z-index: 200; max-width: 260px; white-space: normal;
+    box-shadow: var(--shadow-lg);
+  }
+  .docs-compact:hover .docs-tooltip { display: block; }
+  .action-btn { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; color: var(--blue-mid); font-size: 14px; transition: background 0.15s; }
+  .action-btn:hover { background: var(--blue-pale); }
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--gray-200); }
+  .pag-info { font-size: 12px; color: var(--gray-600); }
+  .pag-btns { display: flex; gap: 4px; }
+  .pag-btn { padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--gray-200); background: var(--white); color: var(--gray-800); }
+  .pag-btn.active { background: var(--blue-mid); color: #fff; border-color: var(--blue-mid); }
+  .pag-btn:hover:not(.active) { border-color: var(--blue-light); }
+
+  /* ─── UPLOAD AREA ─── */
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .upload-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 28px; box-shadow: var(--shadow);
+    border: 2px dashed var(--gray-200); transition: border 0.2s;
+    text-align: center; cursor: pointer; position: relative;
+  }
+  .upload-card:hover { border-color: var(--blue-light); }
+  .upload-card.drag-over { border-color: var(--blue-light); background: var(--blue-bg); }
+  .upload-card input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  .upload-title { font-size: 15px; font-weight: 700; color: var(--blue-dark); margin-bottom: 6px; }
+  .upload-desc { font-size: 12.5px; color: var(--gray-600); margin-bottom: 16px; line-height: 1.5; }
+  .upload-status { font-size: 12px; margin-top: 10px; padding: 8px 12px; border-radius: var(--radius-sm); display: none; }
+  .upload-status.ok { background: #E6FAF4; color: var(--green); display: block; }
+  .upload-status.err { background: #FFF0F2; color: var(--red); display: block; }
+  .upload-fields { margin-top: 12px; text-align: left; }
+  .field-chip { display: inline-block; background: var(--blue-pale); color: var(--blue-mid); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin: 2px; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(10,36,99,0.45);
+    z-index: 900; display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: var(--radius);
+    width: 560px; max-width: 95vw; max-height: 90vh;
+    box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-head { padding: 20px 24px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; }
+  .modal-head h3 { font-size: 15px; font-weight: 700; color: var(--blue-dark); }
+  .modal-close { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--gray-400); line-height: 1; }
+  .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .modal-foot { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1/-1; }
+  .form-label { font-size: 11.5px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.4px; }
+  .form-control {
+    background: var(--gray-100); border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius-sm); padding: 9px 12px;
+    font-size: 13px; color: var(--gray-800); outline: none; transition: border 0.15s;
+  }
+  .form-control:focus { border-color: var(--blue-light); background: #fff; }
+  .form-control[readonly] { opacity: 0.7; cursor: not-allowed; }
+  .justif-group { margin-top: 14px; border: 2px solid var(--red); border-radius: var(--radius); padding: 14px; background: #FFF8F9; }
+  .justif-label { font-size: 12px; font-weight: 700; color: var(--red); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .justif-textarea { width: 100%; border: 1.5px solid #F8C0C8; border-radius: var(--radius-sm); padding: 9px 12px; font-size: 13px; resize: vertical; min-height: 80px; outline: none; font-family: inherit; }
+  .justif-textarea:focus { border-color: var(--red); }
+
+  /* ─── DETAIL PANEL ─── */
+  .detail-panel {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 420px;
+    background: var(--white); box-shadow: -4px 0 24px rgba(10,36,99,0.18);
+    z-index: 200; transform: translateX(100%); transition: transform 0.25s ease;
+    display: flex; flex-direction: column;
+  }
+  .detail-panel.open { transform: translateX(0); }
+  .detail-head { padding: 20px 24px; background: var(--blue-dark); color: #fff; }
+  .detail-head h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .detail-head p { font-size: 12px; opacity: 0.7; }
+  .detail-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; }
+  .detail-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .detail-section { margin-bottom: 20px; }
+  .detail-section-title { font-size: 11px; font-weight: 800; color: var(--blue-mid); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--gray-200); }
+  .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--gray-200); font-size: 13px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--gray-600); font-weight: 500; }
+  .detail-val { color: var(--gray-800); font-weight: 600; text-align: right; max-width: 60%; }
+
+  /* ─── PERFORMANCE ─── */
+  .perf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+  .perf-card { background: var(--white); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+  .perf-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .perf-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--blue-mid); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; }
+  .perf-name { font-size: 13px; font-weight: 700; color: var(--blue-dark); }
+  .perf-role { font-size: 11px; color: var(--gray-400); }
+  .perf-kpis { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .perf-kpi { text-align: center; }
+  .perf-kpi-val { font-size: 20px; font-weight: 800; color: var(--blue-dark); }
+  .perf-kpi-lbl { font-size: 10px; color: var(--gray-400); font-weight: 600; text-transform: uppercase; }
+  .progress-bar { background: var(--gray-200); border-radius: 20px; height: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--blue-light), var(--blue-mid)); transition: width 0.5s; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 11px; margin-top: 5px; color: var(--gray-600); font-weight: 600; }
+
+  /* ─── TOAST ─── */
+  .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast { background: var(--gray-800); color: #fff; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; box-shadow: var(--shadow-lg); animation: toastIn 0.25s ease; display: flex; align-items: center; gap: 10px; min-width: 260px; }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+  .toast.warning { background: var(--orange); }
+  @keyframes toastIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* ─── MISC ─── */
+  .sla-kpi {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, #1a3a8f 50%, var(--blue-mid) 100%);
+    border-radius: var(--radius); padding: 20px 28px; color: #fff;
+    display: flex; align-items: center; gap: 28px;
+    box-shadow: var(--shadow-lg); margin-bottom: 24px;
+    position: relative; overflow: hidden;
+  }
+  .sla-kpi::after {
+    content:''; position:absolute; right:-30px; top:-30px;
+    width:160px; height:160px; border-radius:50%;
+    background:rgba(255,255,255,0.05); pointer-events:none;
+  }
+  .sla-circle {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 3px solid rgba(255,255,255,0.35);
+    box-shadow: 0 0 0 6px rgba(255,255,255,0.07);
+    flex-shrink: 0;
+  }
+  .sla-pct { font-size: 28px; font-weight: 900; line-height: 1; }
+  .sla-lbl-small { font-size: 9.5px; opacity: 0.7; font-weight: 700; letter-spacing: .8px; margin-top: 2px; text-transform: uppercase; }
+  .sla-info { flex: 1; }
+  .sla-info h3 { font-size: 13px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; opacity: .7; margin-bottom: 12px; }
+  .sla-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sla-chip {
+    display: flex; flex-direction: column; align-items: center;
+    background: rgba(255,255,255,0.13); border-radius: 10px;
+    padding: 10px 18px; min-width: 90px; border: 1px solid rgba(255,255,255,0.18);
+  }
+  .sla-chip-val { font-size: 22px; font-weight: 900; line-height: 1; }
+  .sla-chip-lbl { font-size: 9.5px; font-weight: 700; opacity: .65; text-transform: uppercase; letter-spacing: .6px; margin-top: 4px; }
+  .sla-chip.green { background: rgba(0,196,140,0.22); border-color: rgba(0,196,140,0.4); }
+  .sla-chip.red   { background: rgba(255,77,106,0.22);  border-color: rgba(255,77,106,0.4); }
+  .empty-state { text-align: center; padding: 60px 24px; color: var(--gray-400); }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; font-weight: 500; }
+  .empty-state .empty-sub { font-size: 12px; margin-top: 6px; }
+  
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .section-title { font-size: 16px; font-weight: 800; color: var(--blue-dark); display: flex; align-items: center; gap: 10px; }
+  .section-title-line { width: 4px; height: 20px; background: var(--blue-light); border-radius: 2px; }
+
+  /* ─── DOCS CHECKLIST ─── */
+  .docs-check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+  .doc-check-item { display: flex; align-items: flex-start; gap: 7px; padding: 5px 4px; border-radius: 6px; cursor: pointer; transition: background .12s; }
+  .doc-check-item:hover { background: rgba(58,134,255,.08); }
+  .doc-check-item input[type=checkbox] { margin-top:2px; accent-color: var(--blue-mid); width:14px; height:14px; cursor:pointer; flex-shrink:0; }
+  .doc-check-item label { font-size: 12px; color: var(--gray-800); cursor: pointer; line-height: 1.4; }
+  .doc-check-item input:checked + label { color: var(--blue-mid); font-weight: 600; }
+
+  /* ─── CONFIRM MODAL ─── */
+  .confirm-overlay { position:fixed;inset:0;background:rgba(10,36,99,.55);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px); }
+  .confirm-overlay.open { display:flex; }
+  .confirm-box { background:#fff;border-radius:var(--radius);padding:32px 28px;max-width:420px;width:90%;box-shadow:var(--shadow-lg);text-align:center;animation:modalIn .2s ease; }
+  .confirm-icon { font-size:48px; margin-bottom:12px; }
+  .confirm-title { font-size:18px;font-weight:800;color:var(--blue-dark);margin-bottom:8px; }
+  .confirm-msg { font-size:13px;color:var(--gray-600);line-height:1.6;margin-bottom:24px; }
+  .confirm-btns { display:flex;gap:12px;justify-content:center; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 64px; }
+    .sidebar-logo h2, .sidebar-logo p, .nav-item span, .nav-section, .sidebar-footer { display: none; }
+    .main { margin-left: 64px; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .upload-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">GP</div>
+    <h2>Gestão & Documentação</h2>
+    <p>GRUPO GPS</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span>Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="navigate('pendentes')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Pendentes</span>
+    </div>
+    <div class="nav-item" onclick="navigate('enviados')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      <span>Enviados / Admitidos</span>
+    </div>
+    <div class="nav-section">Operação</div>
+    <div class="nav-item" onclick="navigate('upload')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      <span>Importar Planilhas</span>
+    </div>
+    <div class="nav-item" onclick="navigate('performance')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Performance do Time</span>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <span>v2.0 · 2025</span>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title" id="topbar-title">Gestão & Documentação</span>
+      <span class="topbar-badge" id="topbar-badge">Ao Vivo</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Exportar Excel</button>
+      <button class="btn btn-primary btn-sm" onclick="exportPDF()">📄 Exportar PDF</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmClearAll()" style="margin-left:4px">🗑️ Apagar Dados</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="view active" id="view-dashboard">
+      <!-- SLA HERO -->
+      <div class="sla-kpi" id="sla-hero">
+        <div class="sla-circle">
+          <span class="sla-pct" id="sla-pct">–%</span>
+          <span class="sla-lbl-small">NO PRAZO</span>
+        </div>
+        <div class="sla-info">
+          <h3>📊 Indicador de Performance</h3>
+          <div class="sla-chips">
+            <div class="sla-chip">
+              <span class="sla-chip-val" id="sla-total-val">0</span>
+              <span class="sla-chip-lbl">Total MRHs</span>
+            </div>
+            <div class="sla-chip green">
+              <span class="sla-chip-val" id="sla-prazo-val">0</span>
+              <span class="sla-chip-lbl">No Prazo</span>
+            </div>
+            <div class="sla-chip red">
+              <span class="sla-chip-val" id="sla-atraso-val">0</span>
+              <span class="sla-chip-lbl">Em Atraso</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARDS -->
+      <div class="cards-grid" id="dash-cards">
+        <div class="card card-blue" onclick="cardFilter('all')">
+          <div class="card-icon">📋</div>
+          <div class="card-label">Total Pendentes</div>
+          <div class="card-value" id="c-pendentes">0</div>
+          <div class="card-sub" id="c-pendentes-sub">MRHs aguardando finalização</div>
+        </div>
+        <div class="card card-green" onclick="cardFilter('enviados-hoje')">
+          <div class="card-icon">📤</div>
+          <div class="card-label">Enviadas Hoje</div>
+          <div class="card-value" id="c-enviadas-hoje">0</div>
+          <div class="card-sub">Admissões finalizadas no dia</div>
+        </div>
+        <div class="card card-blue" onclick="cardFilter('entrou-hoje')" style="border-left-color:#4CC9F0">
+          <div class="card-icon">🆕</div>
+          <div class="card-label">Ingressos Hoje</div>
+          <div class="card-value" id="c-entrou">0</div>
+          <div class="card-sub">Novas MRHs cadastradas</div>
+        </div>
+        <div class="card card-red" onclick="cardFilter('atraso')" style="cursor:pointer">
+          <div class="card-icon">⚠️</div>
+          <div class="card-label">MRH em Atraso</div>
+          <div class="card-value" id="c-atraso">0</div>
+          <div class="card-sub" id="c-atraso-sub">Fora do prazo — clique para ver</div>
+        </div>
+        <div class="card card-orange" onclick="cardFilter('vence-hoje')">
+          <div class="card-icon">🔔</div>
+          <div class="card-label">Vencem Hoje</div>
+          <div class="card-value" id="c-vence-hoje">0</div>
+          <div class="card-sub">Prazo ASO expira hoje</div>
+        </div>
+        <div class="card card-yellow" onclick="cardFilter('vence-d7')">
+          <div class="card-icon">📅</div>
+          <div class="card-label">Vencem em 7 Dias</div>
+          <div class="card-value" id="c-vence-d7">0</div>
+          <div class="card-sub">Atenção nos próximos dias</div>
+        </div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">📊 Pendentes vs Enviados por Mês</div>
+          <div class="chart-wrap"><canvas id="chartMes"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🍩 Status de Pontualidade</div>
+          <div class="chart-wrap"><canvas id="chartPrazo"></canvas></div>
+        </div>
+        <div class="chart-card" style="grid-column:1/-1">
+          <div class="chart-title">👥 Performance por Assistente</div>
+          <div id="chart-assistente-pizza" style="padding:8px 0;display:flex;flex-wrap:wrap;gap:20px;justify-content:center;"></div>
+        </div>
+      </div>
+
+      <!-- FILTERED TABLE FROM CARDS -->
+      <div id="card-filter-result" style="display:none">
+        <div class="section-header">
+          <div class="section-title">
+            <div class="section-title-line"></div>
+            <span id="card-filter-title">Listagem Filtrada</span>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearCardFilter()">✕ Limpar Filtro</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-scroll"><table id="card-filter-table"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PENDENTES ═══ -->
+    <div class="view" id="view-pendentes">
+      <div class="filters-bar">
+        <div class="filter-group">
+          <span class="filter-label">Assistente</span>
+          <select class="filter-select" id="filt-p-analista" onchange="filterTable('pendentes')"><option value="">Todos</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">CR</span>
+          <input class="filter-input" id="filt-p-cr" placeholder="Filtrar CR..." oninput="filterTable('pendentes')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">MRH</span>
+          <input class="filter-input" id="filt-p-mrh" placeholder="Filtrar MRH..." oninput="filterTable('pendentes')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Nome / CPF</span>
+          <input class="filter-input" id="filt-p-nome" placeholder="Nome ou CPF..." oninput="filterTable('pendentes')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Período</span>
+          <div class="period-btns" id="period-p">
+            <button class="period-btn active" onclick="setPeriod('pendentes','all',this)">Todos</button>
+            <button class="period-btn" onclick="setPeriod('pendentes','today',this)">Hoje</button>
+            <button class="period-btn" onclick="setPeriod('pendentes','week',this)">Semana</button>
+            <button class="period-btn" onclick="setPeriod('pendentes','month',this)">Mês</button>
+            <button class="period-btn" onclick="setPeriod('pendentes','30d',this)">30 Dias</button>
+            <button class="period-btn" onclick="setPeriod('pendentes','custom',this)">📅</button>
+          </div>
+          <div class="custom-date-range" id="range-pendentes">
+            <input type="date" class="filter-input" id="filt-p-from" oninput="filterTable('pendentes')" style="min-width:100px">
+            <span style="font-size:12px;color:var(--gray-600)">até</span>
+            <input type="date" class="filter-input" id="filt-p-to" oninput="filterTable('pendentes')" style="min-width:100px">
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="clearFilters('pendentes')" style="align-self:flex-end">Limpar</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Candidatos Pendentes</span>
+          <span class="table-count" id="count-pendentes">0 registros</span>
+        </div>
+        <div class="table-scroll">
+          <table id="table-pendentes"><thead><tr>
+            <th>MRH</th><th>Nome Completo</th><th>CPF</th><th>Função</th><th>CR/Contrato</th>
+            <th>Início Contrato</th><th>Gerente</th><th>Recrutador</th><th>ASO</th><th>Tipo ASO</th>
+            <th>Resp. Doc.</th><th>Docs Pendentes</th><th>Ações</th>
+          </tr></thead><tbody id="tbody-pendentes"></tbody></table>
+        </div>
+        <div class="pagination" id="pag-pendentes">
+          <span class="pag-info" id="pag-p-info"></span>
+          <div class="pag-btns" id="pag-p-btns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ENVIADOS ═══ -->
+    <div class="view" id="view-enviados">
+      <div class="filters-bar">
+        <div class="filter-group">
+          <span class="filter-label">Assistente</span>
+          <select class="filter-select" id="filt-e-analista" onchange="filterTable('enviados')"><option value="">Todos</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">CR</span>
+          <input class="filter-input" id="filt-e-cr" placeholder="Filtrar CR..." oninput="filterTable('enviados')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">MRH</span>
+          <input class="filter-input" id="filt-e-mrh" placeholder="Filtrar MRH..." oninput="filterTable('enviados')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Nome / CPF</span>
+          <input class="filter-input" id="filt-e-nome" placeholder="Nome ou CPF..." oninput="filterTable('enviados')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Status</span>
+          <select class="filter-select" id="filt-e-status" onchange="filterTable('enviados')">
+            <option value="">Todos</option>
+            <option value="No Prazo">No Prazo</option>
+            <option value="Em Atraso">Em Atraso</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Período</span>
+          <div class="period-btns">
+            <button class="period-btn active" onclick="setPeriod('enviados','all',this)">Todos</button>
+            <button class="period-btn" onclick="setPeriod('enviados','today',this)">Hoje</button>
+            <button class="period-btn" onclick="setPeriod('enviados','week',this)">Semana</button>
+            <button class="period-btn" onclick="setPeriod('enviados','month',this)">Mês</button>
+            <button class="period-btn" onclick="setPeriod('enviados','30d',this)">30 Dias</button>
+            <button class="period-btn" onclick="setPeriod('enviados','custom',this)">📅</button>
+          </div>
+          <div class="custom-date-range" id="range-enviados">
+            <input type="date" class="filter-input" id="filt-e-from" oninput="filterTable('enviados')" style="min-width:100px">
+            <span style="font-size:12px;color:var(--gray-600)">até</span>
+            <input type="date" class="filter-input" id="filt-e-to" oninput="filterTable('enviados')" style="min-width:100px">
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="clearFilters('enviados')" style="align-self:flex-end">Limpar</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Candidatos Enviados / Admitidos</span>
+          <span class="table-count" id="count-enviados">0 registros</span>
+        </div>
+        <div class="table-scroll">
+          <table id="table-enviados"><thead><tr>
+            <th>MRH</th><th>Nome Completo</th><th>CPF</th><th>Função</th><th>CR/Contrato</th>
+            <th>Início Contrato</th><th>Admissão</th><th>Finalização RH</th>
+            <th>Assistente</th><th>Status</th><th>Avisado</th><th>Justificativa</th><th>Ações</th>
+          </tr></thead><tbody id="tbody-enviados"></tbody></table>
+        </div>
+        <div class="pagination" id="pag-enviados">
+          <span class="pag-info" id="pag-e-info"></span>
+          <div class="pag-btns" id="pag-e-btns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ UPLOAD ═══ -->
+    <div class="view" id="view-upload">
+      <div class="section-header">
+        <div class="section-title"><div class="section-title-line"></div>Importar Planilhas Excel</div>
+      </div>
+      <div class="upload-grid">
+        <div class="upload-card" id="drop-pendentes" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDropSRH(event)">
+          <!-- inputs ocultos para trigger programático -->
+          <input type="file" id="file-srh" accept=".xlsx,.xls" style="display:none" onchange="handleFileSRH(event)">
+          <input type="file" id="file-doc" accept=".xlsx,.xls" style="display:none" onchange="handleFileDoc(event)">
+          <div class="upload-icon" id="pend-icon">📋</div>
+          <div class="upload-title">Planilha de Candidatos Pendentes</div>
+          <div id="pend-step-desc" class="upload-desc">Clique para selecionar a <strong>P1 — SRH</strong> (planilha com os IDs / MRHs).</div>
+          <!-- Etapas visuais -->
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px" id="pend-steps">
+            <div id="step-srh" style="border-radius:8px;padding:10px 14px;border:2px dashed var(--blue-mid,#3b7de8);background:#eef3ff;cursor:pointer" onclick="document.getElementById('file-srh').click()">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:18px" id="icon-srh">📂</span>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--blue-mid,#3b7de8)">Passo 1 — P1 SRH</div>
+                  <div style="font-size:11px;color:#555" id="label-srh">Clique aqui para selecionar</div>
+                </div>
+              </div>
+            </div>
+            <div id="step-doc" style="border-radius:8px;padding:10px 14px;border:2px dashed #ccc;background:#f9f9f9;opacity:.5;pointer-events:none">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:18px" id="icon-doc">📂</span>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:#7c3aed">Passo 2 — P2 Doc</div>
+                  <div style="font-size:11px;color:#555" id="label-doc">Aguardando P1...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="upload-status" id="status-pendentes" style="margin-top:10px"></div>
+        </div>
+        <div class="upload-card" id="drop-enviados" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event,'enviados')">
+          <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'enviados')">
+          <div class="upload-icon">📤</div>
+          <div class="upload-title">Planilha de Candidatos Enviados</div>
+          <div class="upload-desc">Colaboradores com cadastro efetuado com sucesso. Inclui os campos de Admissão e Finalização RH.</div>
+          <div style="margin-top:8px">
+            <span class="field-chip">Todos os campos de Pendentes</span>
+            <span class="field-chip">ADMISSAO</span>
+            <span class="field-chip">FINALIZACAO_RH</span>
+          </div>
+          <div class="upload-status" id="status-enviados"></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">📊 Log de Importações</span>
+        </div>
+        <div class="table-scroll">
+          <table><thead><tr><th>Data/Hora</th><th>Tipo</th><th>Arquivo</th><th>Novos</th><th>Duplicados</th><th>Total Processado</th></tr></thead>
+          <tbody id="import-log"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PERFORMANCE ═══ -->
+    <div class="view" id="view-performance">
+      <div class="section-header">
+        <div class="section-title"><div class="section-title-line"></div>Performance do Time – Visão Individual</div>
+        <div>
+          <select class="filter-select" id="filt-perf-analista" onchange="renderPerformance()"><option value="">Todos os Assistentes</option></select>
+        </div>
+      </div>
+      <div class="perf-grid" id="perf-grid">
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-icon">👥</div>
+          <p>Nenhum dado de performance disponível</p>
+          <p class="empty-sub">Importe as planilhas para visualizar as métricas individuais</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- MODAL CONFIRMAR APAGAR -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">⚠️</div>
+    <div class="confirm-title">Apagar todos os dados?</div>
+    <div class="confirm-msg">Esta ação irá remover <strong>todos os Pendentes, Enviados e o histórico de importações</strong> permanentemente.<br><br>Esta ação <strong>não pode ser desfeita</strong>.</div>
+    <div class="confirm-btns">
+      <button class="btn btn-outline" onclick="document.getElementById('confirm-overlay').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-danger" onclick="clearAllData()">🗑️ Sim, apagar tudo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIÇÃO -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Editar Candidato</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><span class="form-label">MRH</span><input class="form-control" id="m-mrh" readonly></div>
+        <div class="form-group"><span class="form-label">CPF</span><input class="form-control" id="m-cpf"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full"><span class="form-label">Nome Completo</span><input class="form-control" id="m-nome"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><span class="form-label">Função</span><input class="form-control" id="m-funcao"></div>
+        <div class="form-group"><span class="form-label">CR / Contrato</span><input class="form-control" id="m-cr"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><span class="form-label">Início Contrato</span><input type="date" class="form-control" id="m-inicio"></div>
+        <div class="form-group">
+          <span class="form-label">ASO – Tipo</span>
+          <div style="background:var(--blue-pale);border:1.5px solid var(--blue-light);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--blue-dark);display:flex;align-items:center;gap:6px">
+            💡 <span id="m-aso-tip">–</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <span class="form-label">Tipo ASO</span>
+          <select class="form-control" id="m-tipo-aso" onchange="updateAsoTip()">
+            <option value="ASO SIMPLES">ASO SIMPLES</option>
+            <option value="ASO COMPLEMENTAR">ASO COMPLEMENTAR</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <span class="form-label">Dias de ASO</span>
+          <select class="form-control" id="m-aso-dias">
+            <option value="2">2 dias</option>
+            <option value="3">3 dias</option>
+            <option value="4">4 dias</option>
+            <option value="5">5 dias</option>
+            <option value="6">6 dias</option>
+            <option value="7">7 dias</option>
+            <option value="mais">Mais de 7 dias (informar)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" id="aso-obs-row" style="display:none">
+        <div class="form-group full">
+          <span class="form-label">Informar Dias de ASO</span>
+          <input class="form-control" id="m-aso-obs" placeholder="Ex: 10 dias – aguardando resultado de exame complementar...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full"><span class="form-label">Resp. Documentação</span><input class="form-control" id="m-resp"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <span class="form-label">Documentos Pendentes</span>
+          <div id="docs-checklist" style="background:var(--gray-100);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px 12px;max-height:260px;overflow-y:auto">
+            <div style="font-size:10.5px;font-weight:800;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Documentos Gerais</div>
+            <div class="docs-check-grid" id="docs-grid-geral"></div>
+            <div style="font-size:10.5px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px">🛡️ Vigilante (se aplicável)</div>
+            <div class="docs-check-grid" id="docs-grid-vig"></div>
+          </div>
+          <input type="hidden" id="m-docs">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><span class="form-label">Admissão</span><input type="date" class="form-control" id="m-admissao"></div>
+        <div class="form-group"><span class="form-label">Finalização RH</span><input type="date" class="form-control" id="m-finalizacao"></div>
+      </div>
+      <div class="justif-group" id="justif-group" style="display:none">
+        <div class="justif-label">⚠️ Justificativa Obrigatória – MRH em Atraso</div>
+        <textarea class="justif-textarea" id="m-justif" placeholder="Descreva o motivo do atraso nesta MRH..."></textarea>
+      </div>
+      <div class="justif-group" id="justif-pend-group" style="display:none;border-color:var(--orange);background:#FFFBF0">
+        <div class="justif-label" style="color:var(--orange)">📝 Justificativa de Atraso – Pendente</div>
+        <textarea class="justif-textarea" id="m-justif-pend" placeholder="Descreva o motivo do atraso desta MRH pendente..." style="border-color:#FECB6E"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-head" style="position:relative">
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+    <h3 id="dp-nome">–</h3>
+    <p id="dp-sub">–</p>
+  </div>
+  <div class="detail-body" id="dp-body"></div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let DB = {
+  pendentes: [],   // {mrh,cpf,nome,funcao,cr,limiteRecrutamento,inicioContrato,gerente,recrutador,whatsapp,aso,tipoAso,respDoc,docsPendentes,_id,_importedAt,justificativa}
+  enviados:  [],   // pendentes fields + {admissao,finalizacaoRH,status}
+  importLog: []
+};
+let periods = { pendentes: 'all', enviados: 'all' };
+let pages = { pendentes: 1, enviados: 1 };
+const PAGE_SIZE = 20;
+let editingId = null;
+let editingType = null;
+let charts = {};
+
+// Load from localStorage
+// ═══════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════════════════
+const SUPA_URL = 'https://opqkejhxwozfklglqchq.supabase.co';
+const SUPA_KEY = 'sb_publishable_r6_IG4slOkBKUQO8TEFVcw_zLUPDGHc';
+
+async function supaFetch(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, opts);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Supabase error: ' + err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// mapeamento snake_case → camelCase
+function rowToPend(r) {
+  return {
+    _id: r.id, mrh: r.mrh, funcao: r.funcao, cr: r.cr,
+    limiteRecrutamento: r.limite_recrutamento, inicioContrato: r.inicio_contrato,
+    gerente: r.gerente, recrutador: r.recrutador, cpf: r.cpf, nome: r.nome,
+    whatsapp: r.whatsapp, aso: r.aso, tipoAso: r.tipo_aso,
+    respDoc: r.resp_doc, docsPendentes: r.docs_pendentes,
+    justificativa: r.justificativa, _importedAt: r.imported_at
+  };
+}
+function rowToEnv(r) {
+  return {
+    _id: r.id, mrh: r.mrh, funcao: r.funcao, cr: r.cr,
+    inicioContrato: r.inicio_contrato, admissao: r.admissao,
+    finalizacaoRH: r.finalizacao_rh, gerente: r.gerente, recrutador: r.recrutador,
+    cpf: r.cpf, nome: r.nome, whatsapp: r.whatsapp, aso: r.aso, tipoAso: r.tipo_aso,
+    respDoc: r.resp_doc, docsPendentes: r.docs_pendentes, status: r.status,
+    justificativa: r.justificativa, avisado: r.avisado, _importedAt: r.imported_at
+  };
+}
+function rowToLog(r) {
+  return { dt: r.data, tipo: r.arquivo.includes('nviad') ? 'Enviados' : 'Pendentes', filename: r.arquivo, novas: r.pendentes, dups: 0, total: r.enviados };
+}
+function pendToRow(r) {
+  return {
+    mrh: r.mrh, funcao: r.funcao, cr: r.cr,
+    limite_recrutamento: r.limiteRecrutamento || null,
+    inicio_contrato: r.inicioContrato || null,
+    gerente: r.gerente, recrutador: r.recrutador, cpf: r.cpf, nome: r.nome,
+    whatsapp: r.whatsapp, aso: r.aso, tipo_aso: r.tipoAso,
+    resp_doc: r.respDoc, docs_pendentes: r.docsPendentes,
+    justificativa: r.justificativa || '', imported_at: r._importedAt || today()
+  };
+}
+function envToRow(r) {
+  return {
+    mrh: r.mrh, funcao: r.funcao, cr: r.cr,
+    inicio_contrato: r.inicioContrato || null,
+    admissao: r.admissao || null, finalizacao_rh: r.finalizacaoRH || null,
+    gerente: r.gerente, recrutador: r.recrutador, cpf: r.cpf, nome: r.nome,
+    whatsapp: r.whatsapp, aso: r.aso, tipo_aso: r.tipoAso,
+    resp_doc: r.respDoc, docs_pendentes: r.docsPendentes,
+    status: r.status, justificativa: r.justificativa || '',
+    avisado: r.avisado || false, imported_at: r._importedAt || today()
+  };
+}
+
+async function loadDB() {
+  try {
+    showLoadingOverlay(true);
+    const [pend, env, logs] = await Promise.all([
+      supaFetch('pendentes?order=created_at.desc'),
+      supaFetch('enviados?order=created_at.desc'),
+      supaFetch('import_log?order=created_at.desc&limit=50')
+    ]);
+    DB.pendentes  = pend.map(rowToPend);
+    DB.enviados   = env.map(rowToEnv);
+    DB.importLog  = logs.map(r => ({
+      dt: new Date(r.created_at).toLocaleString('pt-BR'),
+      tipo: r.arquivo,
+      filename: r.arquivo,
+      novas: r.pendentes,
+      dups: 0,
+      total: r.enviados
+    }));
+  } catch(e) {
+    console.error('loadDB error', e);
+    toast('Erro ao carregar dados: ' + e.message, 'error');
+  } finally {
+    showLoadingOverlay(false);
+  }
+}
+
+async function saveDB() {
+  // saveDB não é mais usada diretamente — cada operação usa sua própria função async
+}
+
+// ─── INSERT pendente
+async function dbInsertPendente(r) {
+  const rows = await supaFetch('pendentes', 'POST', pendToRow(r));
+  if (rows && rows[0]) r._id = rows[0].id;
+  return r;
+}
+// ─── INSERT enviado
+async function dbInsertEnviado(r) {
+  const rows = await supaFetch('enviados', 'POST', envToRow(r));
+  if (rows && rows[0]) r._id = rows[0].id;
+  return r;
+}
+// ─── UPDATE pendente
+async function dbUpdatePendente(r) {
+  await supaFetch('pendentes?id=eq.' + r._id, 'PATCH', pendToRow(r));
+}
+// ─── UPDATE enviado
+async function dbUpdateEnviado(r) {
+  await supaFetch('enviados?id=eq.' + r._id, 'PATCH', envToRow(r));
+}
+// ─── UPDATE avisado
+async function dbToggleAvisado(id, val) {
+  await supaFetch('enviados?id=eq.' + id, 'PATCH', { avisado: val });
+}
+// ─── DELETE all
+async function dbClearAll() {
+  await Promise.all([
+    supaFetch('pendentes?id=neq.00000000-0000-0000-0000-000000000000', 'DELETE'),
+    supaFetch('enviados?id=neq.00000000-0000-0000-0000-000000000000', 'DELETE'),
+    supaFetch('import_log?id=neq.00000000-0000-0000-0000-000000000000', 'DELETE')
+  ]);
+}
+// ─── INSERT log
+async function dbInsertLog(arquivo, pendentes, enviados) {
+  await supaFetch('import_log', 'POST', {
+    arquivo, pendentes, enviados,
+    data: new Date().toLocaleString('pt-BR')
+  });
+}
+
+function showLoadingOverlay(show) {
+  let el = document.getElementById('loading-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loading-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(10,36,99,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+    el.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 8px 32px rgba(10,36,99,0.25)"><div style="font-size:36px;margin-bottom:12px">⏳</div><div style="font-size:15px;font-weight:700;color:#0A2463">Carregando dados...</div><div style="font-size:12px;color:#9FAEC3;margin-top:4px">Conectando ao Supabase</div></div>';
+    document.body.appendChild(el);
+  }
+  el.style.display = show ? 'flex' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════
+const viewTitles = { dashboard: 'Gestão & Documentação', pendentes: 'Candidatos Pendentes', enviados: 'Enviados / Admitidos', upload: 'Importar Planilhas', performance: 'Performance do Time' };
+function navigate(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  event.currentTarget.classList.add('active');
+  document.getElementById('topbar-title').textContent = viewTitles[v] || v;
+  if (v === 'dashboard') renderDashboard();
+  if (v === 'pendentes') { populateFilters(); filterTable('pendentes'); }
+  if (v === 'enviados') { populateFilters(); filterTable('enviados'); }
+  if (v === 'performance') renderPerformance();
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseDate(v) {
+  if (!v) return null;
+  if (typeof v === 'number') {
+    // Excel serial
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    return d.toISOString().split('T')[0];
+  }
+  if (typeof v === 'string') {
+    const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    if (v.match(/^\d{4}-\d{2}-\d{2}/)) return v.split('T')[0];
+  }
+  return null;
+}
+function fmtDate(s) { if (!s) return '–'; const p=s.split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s; }
+function daysBetween(a, b) {
+  if (!a || !b) return null;
+  return Math.floor((new Date(b) - new Date(a)) / 86400000);
+}
+function calcStatus(inicio, finalizacao) {
+  if (!inicio || !finalizacao) return null;
+  // finalizacao anterior ao inicio = entregou antes = No Prazo
+  // finalizacao igual ou posterior = Em Atraso
+  return finalizacao >= inicio ? 'Em Atraso' : 'No Prazo';
+}
+function prazoASO(tipoAso) {
+  if (!tipoAso) return 2;
+  if (tipoAso.toUpperCase().includes('COMPLEMENTAR')) return 7;
+  return 2;
+}
+function venceEm(inicio, tipoAso) {
+  // Prazo: o ASO deve estar pronto X dias ANTES do início do contrato
+  if (!inicio) return null;
+  const d = new Date(inicio + 'T12:00:00'); // evita bug de timezone
+  d.setDate(d.getDate() - prazoASO(tipoAso));
+  return d.toISOString().split('T')[0];
+}
+function normalize(s) { return s ? String(s).trim().toLowerCase() : ''; }
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function randomColor(seed) {
+  const colors = ['#1E4DB7','#3A86FF','#00C48C','#FF9500','#9B5DE5','#F72585','#4CC9F0','#FF006E'];
+  let h = 0; for(const c of seed) h=(h<<5)-h+c.charCodeAt(0); return colors[Math.abs(h)%colors.length];
+}
+
+// ═══════════════════════════════════════════════════════
+// UPLOAD / PARSE
+// ═══════════════════════════════════════════════════════
+function handleDrop(e, type) {
+  e.preventDefault();
+  document.getElementById('drop-'+type).classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f, type);
+}
+function handleFile(e, type) {
+  const f = e.target.files[0];
+  if (f) processFile(f, type);
+}
+function processFile(file, type) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      // pendentes agora usam runImportPendentes() com P1+P2
+      if (type !== 'pendentes') importEnviados(rows, file.name);
+    } catch(err) {
+      showStatus(type, 'err', '❌ Erro ao processar: ' + err.message);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ── Fluxo sequencial P1 → P2 → import ──────────────────────────────────
+let _bufSRH = null;
+let _bufDoc = null;
+let _srhFilename = '';
+
+function readXLSX(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'binary'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        resolve(XLSX.utils.sheet_to_json(ws, {defval:''}));
+      } catch(e) { reject(e); }
+    };
+    reader.readAsBinaryString(file);
+  });
+}
+
+function handleDropSRH(event) {
+  event.preventDefault();
+  document.getElementById('drop-pendentes').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) processSRHFile(file);
+}
+
+async function handleFileSRH(event) {
+  const file = event.target.files[0]; if (!file) return;
+  await processSRHFile(file);
+}
+
+async function processSRHFile(file) {
+  _srhFilename = file.name;
+  showStatus('pendentes', 'ok', '⏳ Lendo P1 (SRH)...');
+  // Feedback visual etapa 1
+  document.getElementById('icon-srh').textContent = '⏳';
+  document.getElementById('label-srh').textContent = 'Lendo...';
+  try {
+    _bufSRH = await readXLSX(file);
+    // Etapa 1 ok
+    document.getElementById('icon-srh').textContent = '✅';
+    document.getElementById('label-srh').textContent = `${file.name} — ${_bufSRH.length} linhas`;
+    document.getElementById('step-srh').style.borderColor = '#22c55e';
+    document.getElementById('step-srh').style.background = '#f0fdf4';
+    // Habilita etapa 2 automaticamente e abre seletor
+    const stepDoc = document.getElementById('step-doc');
+    stepDoc.style.opacity = '1';
+    stepDoc.style.pointerEvents = 'auto';
+    stepDoc.style.borderColor = '#7c3aed';
+    stepDoc.style.background = '#f5f3ff';
+    stepDoc.style.cursor = 'pointer';
+    stepDoc.onclick = () => document.getElementById('file-doc').click();
+    document.getElementById('icon-doc').textContent = '📂';
+    document.getElementById('label-doc').textContent = 'Clique aqui para selecionar';
+    document.getElementById('pend-step-desc').innerHTML = 'P1 carregada! Agora selecione a <strong>P2 — Doc</strong> para complementar os dados.';
+    showStatus('pendentes', 'ok', '✅ P1 pronta! Agora selecione a P2 (Doc).');
+    // Abre o seletor da P2 automaticamente
+    setTimeout(() => document.getElementById('file-doc').click(), 300);
+  } catch(e) {
+    document.getElementById('icon-srh').textContent = '❌';
+    document.getElementById('label-srh').textContent = 'Erro: ' + e.message;
+    _bufSRH = null;
+    showStatus('pendentes', 'err', '❌ Erro ao ler P1: ' + e.message);
+  }
+}
+
+async function handleFileDoc(event) {
+  const file = event.target.files[0]; if (!file) return;
+  if (!_bufSRH) { showStatus('pendentes', 'err', '❌ Selecione a P1 (SRH) primeiro.'); return; }
+  showStatus('pendentes', 'ok', '⏳ Lendo P2 (Doc) e cruzando...');
+  document.getElementById('icon-doc').textContent = '⏳';
+  document.getElementById('label-doc').textContent = 'Lendo...';
+  try {
+    _bufDoc = await readXLSX(file);
+    document.getElementById('icon-doc').textContent = '✅';
+    document.getElementById('label-doc').textContent = `${file.name} — ${_bufDoc.length} linhas`;
+    document.getElementById('step-doc').style.borderColor = '#22c55e';
+    document.getElementById('step-doc').style.background = '#f0fdf4';
+    document.getElementById('pend-step-desc').innerHTML = 'P1 e P2 carregadas! Cruzando e importando...';
+    showStatus('pendentes', 'ok', '⏳ Cruzando dados e importando...');
+    // Cruza e importa automaticamente
+    await runImportPendentes(file.name);
+  } catch(e) {
+    document.getElementById('icon-doc').textContent = '❌';
+    document.getElementById('label-doc').textContent = 'Erro: ' + e.message;
+    _bufDoc = null;
+    showStatus('pendentes', 'err', '❌ Erro ao ler P2: ' + e.message);
+  }
+}
+
+async function runImportPendentes(docFilename) {
+  if (!_bufSRH) { showStatus('pendentes', 'err', '❌ Selecione a P1 (SRH) primeiro.'); return; }
+
+  // Monta mapa da P2 pelo ID
+  const docMap = {};
+  if (_bufDoc) {
+    for (const row of _bufDoc) {
+      const id = String(row['ID'] || row['id'] || row['MRH'] || '').trim().replace(/\.0$/, '');
+      if (id) docMap[id] = row;
+    }
+  }
+
+  // Cruza P1 com P2
+  const mergedRows = _bufSRH.map(r1 => {
+    const id = String(r1['ID'] || r1['id'] || '').trim().replace(/\.0$/, '');
+    const r2 = docMap[id] || {};
+    return { ...r2, ...r1 };
+  });
+
+  const filenames = _srhFilename + (docFilename ? ' + ' + docFilename : '');
+  await importPendentes(mergedRows, filenames);
+
+  // Reset UI para próxima importação
+  setTimeout(() => {
+    _bufSRH = null; _bufDoc = null; _srhFilename = '';
+    document.getElementById('file-srh').value = '';
+    document.getElementById('file-doc').value = '';
+    document.getElementById('icon-srh').textContent = '📂';
+    document.getElementById('label-srh').textContent = 'Clique aqui para selecionar';
+    document.getElementById('icon-doc').textContent = '📂';
+    document.getElementById('label-doc').textContent = 'Aguardando P1...';
+    document.getElementById('step-srh').style.borderColor = 'var(--blue-mid,#3b7de8)';
+    document.getElementById('step-srh').style.background = '#eef3ff';
+    document.getElementById('step-doc').style.opacity = '.5';
+    document.getElementById('step-doc').style.pointerEvents = 'none';
+    document.getElementById('step-doc').style.borderColor = '#ccc';
+    document.getElementById('step-doc').style.background = '#f9f9f9';
+    document.getElementById('pend-step-desc').innerHTML = 'Clique para selecionar a <strong>P1 — SRH</strong> (planilha com os IDs / MRHs).';
+  }, 4000);
+}
+
+function mapRowSRH(row) {
+  const get = (...keys) => { for(const k of keys) { for(const rk of Object.keys(row)) { if(normalize(rk)===normalize(k)||normalize(rk).includes(normalize(k))) return row[rk]; } } return ''; };
+  const id = String(get('ID','MRH','id') || '').trim().replace(/\.0$/,'');
+  return {
+    mrh:               id,
+    funcao:            String(get('DescFuncao','FUNÇÃO','FUNCAO','função') || '').trim(),
+    cr:                String(get('DescCR','CONTRATO','CR','descCR') || '').trim(),
+    limiteRecrutamento:parseDate(get('LIMITE_RECRUTAMENTO','LIMITE RECRUTAMENTO')),
+    inicioContrato:    parseDate(get('INICIO_CONTRATO','INICIO CONTRATO','Início Contrato')),
+    gerente:           String(get('XNGERE','GERENTE','gerente') || '').trim(),
+    recrutador:        String(get('RECRUTADOR','recrutador','RESPONSAVEL','responsável') || '').trim(),
+    cpf:               String(get('CPF','cpf') || '').trim().replace(/\D/g,''),
+    nome:              String(get('NOME COMPLETO','NOME','nome') || '').trim(),
+    whatsapp:          String(get('WHATSAPP','whatsapp') || '').trim(),
+    aso:               String(get('ASO','aso') || '').trim(),
+    tipoAso:           String(get('TIPO ASO','TIPO_ASO','tipo aso') || '').trim(),
+    respDoc:           String(get('RESP. DOCUMENTAÇÃO','RESP DOCUMENTACAO','RESP. DOCUMENTACAO','resp documentação') || '').trim(),
+    docsPendentes:     String(get('DOCUMENTOS PENDENTES','DOCS PENDENTES','documentos pendentes') || '').trim(),
+  };
+}
+
+// Mantém mapRow como alias para compatibilidade (usado pelo fluxo enviados)
+function mapRow(row) { return mapRowSRH(row); }
+
+async function importPendentes(rows, filename) {
+  let novas = 0, dups = 0;
+  showStatus('pendentes', 'ok', '⏳ Importando...');
+  for (const row of rows) {
+    const m = mapRowSRH(row);
+    if (!m.mrh && !m.cpf) continue;
+    const exists = DB.pendentes.some(p => p.mrh === m.mrh);
+    if (!exists) {
+      const rec = { ...m, _id: uid(), _importedAt: today(), justificativa: '' };
+      try {
+        await dbInsertPendente(rec);
+        DB.pendentes.push(rec);
+        novas++;
+      } catch(e) { console.error('insert pendente err', e); }
+    } else { dups++; }
+  }
+  try { await dbInsertLog(filename, novas, rows.length); } catch(e){}
+  populateFilters();
+  filterTable('pendentes');
+  renderDashboard();
+  showStatus('pendentes', 'ok', `✅ ${novas} novos registros inseridos. ${dups} duplicados ignorados.`);
+  addLog(filename, 'Pendentes', novas, dups, rows.length);
+  toast(`${novas} candidatos pendentes importados com sucesso!`, 'success');
+}
+
+async function importEnviados(rows, filename) {
+  let novas = 0, ignorados = 0, dups = 0;
+  showStatus('enviados', 'ok', '⏳ Importando...');
+  for (const row of rows) {
+    const m = mapRow(row);
+    const admissao = parseDate(row['ADMISSAO'] || row['Admissão'] || row['admissao'] || row['ADMISSÃO'] || row['DT ADMISSÃO'] || row['DT_ADMISSAO'] || '');
+    const finalizacaoRH = parseDate(row['FINALIZACAO_RH'] || row['FINALIZAÇÃO RH'] || row['FINALIZACAO RH'] || row['finalizacao_rh'] || '');
+    // Valida: a MRH enviada precisa existir nos pendentes (por MRH)
+    const pendRef = DB.pendentes.find(p => p.mrh === m.mrh);
+    if (!pendRef) { ignorados++; continue; }
+    const exists = DB.enviados.some(e => e.mrh === m.mrh);
+    if (exists) { dups++; continue; }
+    const status = calcStatus(m.inicioContrato || pendRef.inicioContrato, finalizacaoRH);
+    // Herda dados do pendente e sobrescreve com o que vier na planilha enviada
+    const rec = { ...pendRef, ...m, admissao, finalizacaoRH, status: status || 'Pendente', _id: uid(), _importedAt: today(), justificativa: '' };
+    try {
+      await dbInsertEnviado(rec);
+      DB.enviados.push(rec);
+      novas++;
+    } catch(e) { console.error('insert enviado err', e); }
+  }
+  try { await dbInsertLog(filename, novas, rows.length); } catch(e){}
+  populateFilters();
+  filterTable('enviados');
+  renderDashboard();
+  showStatus('enviados', 'ok', `✅ ${novas} registros cruzados. ${ignorados} MRHs sem histórico pendente (ignorados). ${dups} duplicados.`);
+  addLog(filename, 'Enviados', novas, dups, rows.length);
+  toast(`${novas} candidatos enviados importados e cruzados!`, 'success');
+}
+
+function addLog(filename, tipo, novas, dups, total) {
+  DB.importLog.unshift({ dt: new Date().toLocaleString('pt-BR'), tipo, filename, novas, dups, total });
+  saveDB();
+  renderImportLog();
+}
+function renderImportLog() {
+  const tbody = document.getElementById('import-log');
+  if (!tbody) return;
+  if (!DB.importLog.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400)">Nenhuma importação realizada</td></tr>'; return; }
+  tbody.innerHTML = DB.importLog.slice(0,20).map(l => `
+    <tr>
+      <td>${l.dt}</td>
+      <td><span class="badge ${l.tipo==='Pendentes'?'badge-blue':'badge-green'}">${l.tipo}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${l.filename}</td>
+      <td><strong style="color:var(--green)">${l.novas}</strong></td>
+      <td><span style="color:var(--gray-400)">${l.dups}</span></td>
+      <td>${l.total}</td>
+    </tr>`).join('');
+}
+
+function showStatus(type, cls, msg) {
+  const el = document.getElementById('status-' + type);
+  el.className = 'upload-status ' + cls;
+  el.textContent = msg;
+}
+
+// ═══════════════════════════════════════════════════════
+// POPULATE FILTERS
+// ═══════════════════════════════════════════════════════
+function populateFilters() {
+  const allResps = [...new Set([...DB.pendentes, ...DB.enviados].map(r=>r.respDoc).filter(Boolean))].sort();
+  ['filt-p-analista','filt-e-analista','filt-perf-analista'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">Todos</option>' + allResps.map(r=>`<option value="${r}" ${r===cur?'selected':''}>${r}</option>`).join('');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// FILTER & RENDER TABLES
+// ═══════════════════════════════════════════════════════
+function getDateRange(period, type) {
+  const t = today(); const now = new Date(t);
+  if (period === 'all') return null;
+  if (period === 'today') return { from: t, to: t };
+  if (period === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - d.getDay());
+    return { from: d.toISOString().split('T')[0], to: t };
+  }
+  if (period === 'month') {
+    return { from: `${t.slice(0,7)}-01`, to: t };
+  }
+  if (period === '30d') {
+    const d = new Date(now); d.setDate(d.getDate()-30);
+    return { from: d.toISOString().split('T')[0], to: t };
+  }
+  if (period === 'custom') {
+    const from = document.getElementById('filt-'+type[0]+'-from')?.value;
+    const to   = document.getElementById('filt-'+type[0]+'-to')?.value;
+    return from || to ? { from: from||'1970-01-01', to: to||'2099-12-31' } : null;
+  }
+  return null;
+}
+
+function filterTable(type) {
+  const prefix = type === 'pendentes' ? 'p' : 'e';
+  const analista = document.getElementById(`filt-${prefix}-analista`)?.value || '';
+  const cr    = normalize(document.getElementById(`filt-${prefix}-cr`)?.value || '');
+  const mrh   = normalize(document.getElementById(`filt-${prefix}-mrh`)?.value || '');
+  const nome  = normalize(document.getElementById(`filt-${prefix}-nome`)?.value || '');
+  const status = document.getElementById('filt-e-status')?.value || '';
+  const range = getDateRange(periods[type], type);
+
+  let data = DB[type].filter(r => {
+    if (analista && r.respDoc !== analista) return false;
+    if (cr && !normalize(r.cr).includes(cr)) return false;
+    if (mrh && !normalize(r.mrh).includes(mrh)) return false;
+    if (nome && !normalize(r.nome).includes(nome) && !normalize(r.cpf).includes(nome)) return false;
+    if (status && r.status !== status) return false;
+    if (range) {
+      const d = r.inicioContrato || r._importedAt;
+      if (d && (d < range.from || d > range.to)) return false;
+    }
+    return true;
+  });
+
+  pages[type] = 1;
+  renderTable(type, data);
+}
+
+function renderTable(type, data) {
+  const tbody = document.getElementById(`tbody-${type}`);
+  const countEl = document.getElementById(`count-${type}`);
+  countEl.textContent = `${data.length} registros`;
+  const page = pages[type];
+  const start = (page-1)*PAGE_SIZE, end = start+PAGE_SIZE;
+  const paged = data.slice(start, end);
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="20"><div class="empty-state"><div class="empty-icon">${type==='pendentes'?'📋':'📤'}</div><p>Nenhum registro encontrado</p><p class="empty-sub">Ajuste os filtros ou importe planilhas</p></div></td></tr>`;
+    renderPagination(type, data.length);
+    return;
+  }
+
+  if (type === 'pendentes') {
+    tbody.innerHTML = paged.map(r => `
+      <tr>
+        <td><strong>${r.mrh||'–'}</strong></td>
+        <td>${r.nome||'–'}</td>
+        <td style="font-size:12px;color:var(--gray-600)">${r.cpf||'–'}</td>
+        <td>${r.funcao||'–'}</td>
+        <td><span class="badge badge-blue">${r.cr||'–'}</span></td>
+        <td>${fmtDate(r.inicioContrato)}</td>
+        <td>${r.gerente||'–'}</td>
+        <td>${r.recrutador||'–'}</td>
+        <td><span class="badge ${r.aso==='OK'?'badge-green':'badge-orange'}">${r.aso||'–'}</span></td>
+        <td><span class="badge badge-gray">${r.tipoAso||'–'}</span></td>
+        <td>${r.respDoc||'–'}</td>
+        <td>${renderDocs(r.docsPendentes)}</td>
+        <td>
+          <button class="action-btn" title="Ver detalhes" onclick="openDetail('${r._id}','pendentes')">👁</button>
+          <button class="action-btn" title="Editar" onclick="openEdit('${r._id}','pendentes')">✏️</button>
+        </td>
+      </tr>`).join('');
+  } else {
+    tbody.innerHTML = paged.map(r => `
+      <tr>
+        <td><strong>${r.mrh||'–'}</strong></td>
+        <td>${r.nome||'–'}</td>
+        <td style="font-size:12px;color:var(--gray-600)">${r.cpf||'–'}</td>
+        <td>${r.funcao||'–'}</td>
+        <td><span class="badge badge-blue">${r.cr||'–'}</span></td>
+        <td><strong style="color:var(--blue-dark)">${fmtDate(r.inicioContrato)}</strong></td>
+        <td>${fmtDate(r.admissao)}</td>
+        <td>${fmtDate(r.finalizacaoRH)}</td>
+        <td>${r.respDoc||'–'}</td>
+        <td><span class="badge ${r.status==='No Prazo'?'badge-green':r.status==='Em Atraso'?'badge-red':'badge-gray'}">${r.status||'–'}</span></td>
+        <td style="text-align:center">
+          <button onclick="toggleAvisado('${r._id}')" title="${r.avisado?'Candidato avisado':'Candidato ainda não avisado'}"
+            style="background:${r.avisado?'#E6FAF4':'var(--gray-100)'};border:1.5px solid ${r.avisado?'var(--green)':'var(--gray-200)'};border-radius:20px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:700;color:${r.avisado?'var(--green)':'var(--gray-400)'};transition:all .15s">
+            ${r.avisado?'✅ Avisado':'○ Avisar'}
+          </button>
+        </td>
+        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--gray-600)">${r.justificativa||'–'}</td>
+        <td>
+          <button class="action-btn" title="Ver detalhes" onclick="openDetail('${r._id}','enviados')">👁</button>
+          <button class="action-btn" title="Editar" onclick="openEdit('${r._id}','enviados')">✏️</button>
+        </td>
+      </tr>`).join('');
+  }
+  renderPagination(type, data.length);
+}
+
+function renderDocs(docs) {
+  if (!docs || !String(docs).trim()) return '<span style="color:var(--gray-400);font-size:12px">–</span>';
+  const list = String(docs).split(/[,;]/).map(s=>s.trim()).filter(Boolean);
+  if (!list.length) return '–';
+  return `<div class="docs-compact">
+    <span class="docs-pill">${list.length} doc${list.length>1?'s':''}</span>
+    <div class="docs-tooltip">${list.join('<br>')}</div>
+  </div>`;
+}
+
+function renderPagination(type, total) {
+  const prefix = type === 'pendentes' ? 'p' : 'e';
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const cur = pages[type];
+  document.getElementById(`pag-${prefix}-info`).textContent = `Pág. ${cur} de ${totalPages||1} · ${total} registros`;
+  const btns = document.getElementById(`pag-${prefix}-btns`);
+  let html = `<button class="pag-btn" onclick="goPage('${type}',${cur-1})" ${cur<=1?'disabled':''}>‹</button>`;
+  const start = Math.max(1, cur-2), end = Math.min(totalPages, cur+2);
+  for(let i=start;i<=end;i++) html+=`<button class="pag-btn ${i===cur?'active':''}" onclick="goPage('${type}',${i})">${i}</button>`;
+  html+=`<button class="pag-btn" onclick="goPage('${type}',${cur+1})" ${cur>=totalPages?'disabled':''}>›</button>`;
+  btns.innerHTML = html;
+}
+function goPage(type, p) {
+  const total = DB[type].length;
+  const maxP = Math.ceil(total/PAGE_SIZE);
+  pages[type] = Math.max(1, Math.min(p, maxP));
+  filterTable(type);
+}
+
+function setPeriod(type, p, btn) {
+  periods[type] = p;
+  btn.closest('.period-btns').querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const range = document.getElementById(`range-${type}`);
+  if (range) range.classList.toggle('visible', p === 'custom');
+  filterTable(type);
+}
+function clearFilters(type) {
+  const prefix = type === 'pendentes' ? 'p' : 'e';
+  ['analista','cr','mrh','nome'].forEach(f => {
+    const el = document.getElementById(`filt-${prefix}-${f}`);
+    if (el) el.value = '';
+  });
+  if (type === 'enviados') document.getElementById('filt-e-status').value = '';
+  periods[type] = 'all';
+  document.querySelectorAll(`#period-${prefix} .period-btn`).forEach((b,i)=>{b.classList.toggle('active',i===0);});
+  filterTable(type);
+}
+
+// ═══════════════════════════════════════════════════════
+// CARD FILTERS (DASHBOARD)
+// ═══════════════════════════════════════════════════════
+let activeCardFilter = null;
+function cardFilter(type) {
+  const t = today();
+  const d7 = new Date(); d7.setDate(d7.getDate()+7);
+  const d7s = d7.toISOString().split('T')[0];
+  let data = [], title = '';
+
+  if (type === 'all') { data = DB.pendentes; title = 'Todos os Pendentes'; }
+  else if (type === 'enviados-hoje') {
+    data = DB.enviados.filter(r=>r.finalizacaoRH===t||r._importedAt===t);
+    title = 'Enviadas Hoje';
+  } else if (type === 'entrou-hoje') {
+    data = DB.pendentes.filter(r=>r._importedAt===t);
+    title = 'Ingressos Hoje';
+  } else if (type === 'atraso') {
+    data = DB.enviados.filter(r=>r.status==='Em Atraso');
+    title = 'MRH em Atraso';
+  } else if (type === 'vence-hoje') {
+    data = DB.pendentes.filter(r=>venceEm(r.inicioContrato,r.tipoAso)===t);
+    title = 'Vencem Hoje';
+  } else if (type === 'vence-d7') {
+    data = DB.pendentes.filter(r=>{ const v=venceEm(r.inicioContrato,r.tipoAso); return v&&v>t&&v<=d7s; });
+    title = 'Vencem nos Próximos 7 Dias';
+  }
+
+  document.querySelectorAll('.card').forEach((c,i)=>{
+    c.classList.toggle('active-filter', c.getAttribute('onclick')?.includes(type));
+  });
+
+  const panel = document.getElementById('card-filter-result');
+  panel.style.display = 'block';
+  document.getElementById('card-filter-title').textContent = `🔍 ${title} (${data.length} registros)`;
+  activeCardFilter = type;
+
+  const isPend = !['enviados-hoje','atraso'].includes(type);
+  const table = document.getElementById('card-filter-table');
+  if (isPend) {
+    table.querySelector('thead').innerHTML = '<tr><th>MRH</th><th>Nome</th><th>CR</th><th>Início Contrato</th><th>Vence em</th><th>Resp. Doc.</th><th>ASO</th></tr>';
+    table.querySelector('tbody').innerHTML = data.length ? data.map(r=>`
+      <tr>
+        <td><strong>${r.mrh||'–'}</strong></td><td>${r.nome||'–'}</td>
+        <td><span class="badge badge-blue">${r.cr||'–'}</span></td>
+        <td>${fmtDate(r.inicioContrato)}</td>
+        <td>${fmtDate(venceEm(r.inicioContrato,r.tipoAso))}</td>
+        <td>${r.respDoc||'–'}</td>
+        <td><span class="badge ${r.aso==='OK'?'badge-green':'badge-orange'}">${r.aso||'–'}</span></td>
+      </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gray-400)">Nenhum registro</td></tr>';
+  } else {
+    table.querySelector('thead').innerHTML = '<tr><th>MRH</th><th>Nome</th><th>CR</th><th>Início Contrato</th><th>Finalização RH</th><th>Resp. Doc.</th><th>Status</th></tr>';
+    table.querySelector('tbody').innerHTML = data.length ? data.map(r=>`
+      <tr>
+        <td><strong>${r.mrh||'–'}</strong></td><td>${r.nome||'–'}</td>
+        <td><span class="badge badge-blue">${r.cr||'–'}</span></td>
+        <td>${fmtDate(r.inicioContrato)}</td>
+        <td>${fmtDate(r.finalizacaoRH)}</td>
+        <td>${r.respDoc||'–'}</td>
+        <td><span class="badge ${r.status==='No Prazo'?'badge-green':'badge-red'}">${r.status||'–'}</span></td>
+      </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gray-400)">Nenhum registro</td></tr>';
+  }
+}
+function clearCardFilter() {
+  activeCardFilter = null;
+  document.getElementById('card-filter-result').style.display = 'none';
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('active-filter'));
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard() {
+  const t = today();
+  const d7 = new Date(); d7.setDate(d7.getDate()+7); const d7s = d7.toISOString().split('T')[0];
+
+  const totalPend = DB.pendentes.length;
+  const envHoje = DB.enviados.filter(r=>r.finalizacaoRH===t||r._importedAt===t).length;
+  const entrouHoje = DB.pendentes.filter(r=>r._importedAt===t).length;
+  const emAtraso = DB.enviados.filter(r=>r.status==='Em Atraso').length;
+  const venceHoje = DB.pendentes.filter(r=>venceEm(r.inicioContrato,r.tipoAso)===t).length;
+  const venceD7 = DB.pendentes.filter(r=>{ const v=venceEm(r.inicioContrato,r.tipoAso); return v&&v>t&&v<=d7s; }).length;
+
+  document.getElementById('c-pendentes').textContent = totalPend;
+  document.getElementById('c-enviadas-hoje').textContent = envHoje;
+  document.getElementById('c-entrou').textContent = entrouHoje;
+  document.getElementById('c-atraso').textContent = emAtraso;
+  document.getElementById('c-vence-hoje').textContent = venceHoje;
+  document.getElementById('c-vence-d7').textContent = venceD7;
+
+  // SLA
+  const totalMRH = DB.pendentes.length + DB.enviados.length;
+  const noPrazo = DB.enviados.filter(r=>r.status==='No Prazo').length;
+  const pct = totalMRH > 0 ? Math.round(noPrazo*100/totalMRH) : 0;
+  document.getElementById('sla-pct').textContent = pct + '%';
+  document.getElementById('sla-total-val').textContent = totalMRH;
+  document.getElementById('sla-prazo-val').textContent = noPrazo;
+  document.getElementById('sla-atraso-val').textContent = emAtraso;
+
+  renderCharts();
+  renderImportLog();
+}
+
+function renderCharts() {
+  // Destroy old
+  Object.values(charts).forEach(c=>c.destroy());
+  charts = {};
+
+  // Chart 1: por mês — pendentes + enviados + % pontualidade
+  const meses = {};
+  DB.pendentes.forEach(r=>{
+    const m = (r.inicioContrato||r._importedAt||'').slice(0,7);
+    if (m) { meses[m] = meses[m]||{p:0,e:0,prazo:0,atraso:0}; meses[m].p++; }
+  });
+  DB.enviados.forEach(r=>{
+    const m = (r.finalizacaoRH||r._importedAt||'').slice(0,7);
+    if (m) {
+      meses[m] = meses[m]||{p:0,e:0,prazo:0,atraso:0};
+      meses[m].e++;
+      if (r.status==='No Prazo') meses[m].prazo++;
+      else if (r.status==='Em Atraso') meses[m].atraso++;
+    }
+  });
+  const mLabels = Object.keys(meses).sort().slice(-6);
+  charts.mes = new Chart(document.getElementById('chartMes'), {
+    type: 'bar',
+    data: {
+      labels: mLabels.map(m=>{ const p=m.split('-'); return p[1]+'/'+p[0]; }),
+      datasets: [
+        { label: 'Pendentes', data: mLabels.map(m=>meses[m]?.p||0), backgroundColor: '#3A86FF', borderRadius:4 },
+        { label: 'Enviados',  data: mLabels.map(m=>meses[m]?.e||0), backgroundColor: '#00C48C', borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom'},
+        tooltip:{
+          callbacks:{
+            label: function(ctx) {
+              const val = ctx.parsed.y;
+              const mesKey = mLabels[ctx.dataIndex];
+              const d = meses[mesKey]||{p:0,e:0,prazo:0,atraso:0};
+              const pctPont = d.e ? Math.round(d.prazo*100/d.e) : 0;
+              if (ctx.datasetIndex===0) return 'Pendentes: '+val+' registros';
+              return ['Enviados: '+val+' registros','  ✅ No Prazo: '+d.prazo+' ('+pctPont+'%)','  ❌ Em Atraso: '+d.atraso,'  Total mês: '+(d.p+d.e)];
+            }
+          }
+        }
+      },
+      scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1}}}
+    }
+  });
+
+  // Chart 2: prazo — doughnut com números e %
+  const noPrazo = DB.enviados.filter(r=>r.status==='No Prazo').length;
+  const emAtraso = DB.enviados.filter(r=>r.status==='Em Atraso').length;
+  const totalPontual = noPrazo + emAtraso + DB.pendentes.length;
+  charts.prazo = new Chart(document.getElementById('chartPrazo'), {
+    type: 'doughnut',
+    data: {
+      labels: ['No Prazo','Em Atraso','Pendentes'],
+      datasets: [{ data: [noPrazo, emAtraso, DB.pendentes.length], backgroundColor: ['#00C48C','#FF4D6A','#9FAEC3'], borderWidth:2, borderColor:'#fff' }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          position:'bottom',
+          labels:{
+            generateLabels: function(chart) {
+              const ds = chart.data.datasets[0];
+              return chart.data.labels.map(function(lbl,i){
+                const val = ds.data[i];
+                const pct = totalPontual>0 ? Math.round(val*100/totalPontual) : 0;
+                return {text: lbl+': '+val+' ('+pct+'%)', fillStyle:ds.backgroundColor[i], strokeStyle:'#fff', lineWidth:2, index:i};
+              });
+            }
+          }
+        },
+        tooltip:{
+          callbacks:{
+            label: function(c) {
+              const pct = totalPontual>0 ? Math.round(c.parsed*100/totalPontual) : 0;
+              return c.label+': '+c.parsed+' registros ('+pct+'%)';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Chart 3: Performance por Assistente — cards com pizza individual
+  const assisMap2 = {};
+  const t_ = today();
+  [...DB.pendentes].forEach(r=>{
+    if(r.respDoc){
+      if(!assisMap2[r.respDoc]) assisMap2[r.respDoc]={pend:0,prazo:0,atraso:0,venceHoje:0};
+      const v=venceEm(r.inicioContrato,r.tipoAso);
+      if(v===t_) assisMap2[r.respDoc].venceHoje++;
+      else assisMap2[r.respDoc].pend++;
+    }
+  });
+  [...DB.enviados].forEach(r=>{
+    if(r.respDoc){
+      if(!assisMap2[r.respDoc]) assisMap2[r.respDoc]={pend:0,prazo:0,atraso:0,venceHoje:0};
+      if(r.status==='No Prazo') assisMap2[r.respDoc].prazo++;
+      else if(r.status==='Em Atraso') assisMap2[r.respDoc].atraso++;
+    }
+  });
+
+  const assisKeys2 = Object.keys(assisMap2).sort((a,b)=>{
+    const ta=assisMap2[a]; const tb=assisMap2[b];
+    return (tb.pend+tb.prazo+tb.atraso+tb.venceHoje)-(ta.pend+ta.prazo+ta.atraso+ta.venceHoje);
+  });
+
+  const pizzaContainer = document.getElementById('chart-assistente-pizza');
+  if(pizzaContainer) {
+    // limpar canvas antigos
+    Object.keys(charts).filter(k=>k.startsWith('pizza_')).forEach(k=>{ charts[k].destroy(); delete charts[k]; });
+
+    if(!assisKeys2.length) {
+      pizzaContainer.innerHTML='<p style="color:var(--gray-400);text-align:center;padding:20px;font-size:13px;width:100%">Sem dados disponíveis</p>';
+    } else {
+      pizzaContainer.innerHTML = assisKeys2.map((name,i) => {
+        const d = assisMap2[name];
+        const total = d.pend + d.prazo + d.atraso + d.venceHoje;
+        const pct = (d.prazo+d.pend) > 0 ? Math.round(d.prazo*100/(d.prazo+d.atraso||1)) : 0;
+        const perfColor = pct>=80?'#00C48C':pct>=50?'#FF9500':'#FF4D6A';
+        const perfLabel = pct>=80?'Ótima':pct>=50?'Regular':'Atenção';
+        const initls = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+        const avatarColors = ['#1E4DB7','#3A86FF','#00C48C','#FF9500','#9B5DE5','#F72585','#4CC9F0'];
+        const avatarColor = avatarColors[i % avatarColors.length];
+        return `<div style="background:#fff;border-radius:14px;padding:18px 16px;box-shadow:0 2px 12px rgba(10,36,99,0.10);width:200px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;border-top:3px solid ${avatarColor}">
+          <div style="width:42px;height:42px;border-radius:50%;background:${avatarColor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">${initls}</div>
+          <div style="text-align:center">
+            <div style="font-size:12px;font-weight:800;color:var(--blue-dark);line-height:1.3">${name}</div>
+            <div style="font-size:10px;color:var(--gray-400);margin-top:1px">${total} MRHs no total</div>
+          </div>
+          <div style="position:relative;width:100px;height:100px">
+            <canvas id="pizza_${i}" width="100" height="100"></canvas>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+              <span style="font-size:16px;font-weight:900;color:${perfColor}">${pct}%</span>
+              <span style="font-size:9px;color:var(--gray-400);font-weight:700">PRAZO</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%">
+            ${d.prazo?`<div style="background:#E6FAF4;border-radius:8px;padding:4px 6px;text-align:center"><div style="font-size:14px;font-weight:800;color:#00C48C">${d.prazo}</div><div style="font-size:9px;color:#00A87A;font-weight:700">No Prazo</div></div>`:''}
+            ${d.atraso?`<div style="background:#FFF0F2;border-radius:8px;padding:4px 6px;text-align:center"><div style="font-size:14px;font-weight:800;color:#FF4D6A">${d.atraso}</div><div style="font-size:9px;color:#FF4D6A;font-weight:700">Atraso</div></div>`:''}
+            ${d.pend?`<div style="background:#EEF4FF;border-radius:8px;padding:4px 6px;text-align:center"><div style="font-size:14px;font-weight:800;color:#1E4DB7">${d.pend}</div><div style="font-size:9px;color:#1E4DB7;font-weight:700">Pendente</div></div>`:''}
+            ${d.venceHoje?`<div style="background:#FFF5E8;border-radius:8px;padding:4px 6px;text-align:center"><div style="font-size:14px;font-weight:800;color:#FF9500">${d.venceHoje}</div><div style="font-size:9px;color:#FF9500;font-weight:700">Vence Hoje</div></div>`:''}
+          </div>
+          <div style="font-size:10px;font-weight:800;color:${perfColor};background:${pct>=80?'#E6FAF4':pct>=50?'#FFF5E8':'#FFF0F2'};border-radius:20px;padding:3px 12px">${perfLabel}</div>
+        </div>`;
+      }).join('');
+
+      // desenhar pizzas depois do DOM atualizar
+      setTimeout(() => {
+        assisKeys2.forEach((name,i) => {
+          const d = assisMap2[name];
+          const canvas = document.getElementById('pizza_'+i);
+          if(!canvas) return;
+          const c = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+              labels: ['No Prazo','Em Atraso','Pendentes','Vence Hoje'],
+              datasets: [{
+                data: [d.prazo||0, d.atraso||0, d.pend||0, d.venceHoje||0],
+                backgroundColor: ['#00C48C','#FF4D6A','#3A86FF','#FF9500'],
+                borderWidth: 2, borderColor: '#fff', hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: false, cutout: '65%',
+              plugins: { legend: { display: false }, tooltip: {
+                callbacks: { label: ctx => ctx.label+': '+ctx.parsed }
+              }}
+            }
+          });
+          charts['pizza_'+i] = c;
+        });
+      }, 50);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PERFORMANCE
+// ═══════════════════════════════════════════════════════
+function renderPerformance() {
+  populateFilters();
+  const filterAss = document.getElementById('filt-perf-analista')?.value || '';
+  const allResps = [...new Set([...DB.pendentes,...DB.enviados].map(r=>r.respDoc).filter(Boolean))].sort();
+  const filtered = filterAss ? [filterAss] : allResps;
+
+  const grid = document.getElementById('perf-grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👥</div><p>Nenhum assistente encontrado</p><p class="empty-sub">Importe as planilhas para visualizar as métricas</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(resp => {
+    const pendAll = DB.pendentes.filter(r=>r.respDoc===resp);
+    const envAll  = DB.enviados.filter(r=>r.respDoc===resp);
+    const total   = pendAll.length + envAll.length;
+    const prazo   = envAll.filter(r=>r.status==='No Prazo').length;
+    const atraso  = envAll.filter(r=>r.status==='Em Atraso').length;
+    const pct     = envAll.length ? Math.round(prazo*100/envAll.length) : 0;
+    const pctAtraso = envAll.length ? Math.round(atraso*100/envAll.length) : 0;
+    const color   = randomColor(resp);
+
+    // ── breakdown mensal (últimos 4 meses)
+    const mMap = {};
+    pendAll.forEach(r=>{ const m=(r.inicioContrato||r._importedAt||'').slice(0,7); if(m){mMap[m]=mMap[m]||{p:0,e:0,pr:0,at:0}; mMap[m].p++;} });
+    envAll.forEach(r=>{ const m=(r.finalizacaoRH||r._importedAt||'').slice(0,7); if(m){mMap[m]=mMap[m]||{p:0,e:0,pr:0,at:0}; mMap[m].e++; if(r.status==='No Prazo')mMap[m].pr++; else if(r.status==='Em Atraso')mMap[m].at++;} });
+    const mKeys = Object.keys(mMap).sort().slice(-4);
+    const mesRows = mKeys.map(mk=>{
+      const d=mMap[mk]; const pp=mk.split('-');
+      const pctM = d.e ? Math.round(d.pr*100/d.e) : 0;
+      return '<tr style="font-size:11.5px"><td style="padding:4px 6px;color:var(--gray-600)">'+pp[1]+'/'+pp[0]+'</td>'
+        +'<td style="padding:4px 6px;text-align:center"><span style="background:#EEF4FF;color:#1E4DB7;padding:1px 7px;border-radius:10px;font-weight:700">'+d.p+'</span></td>'
+        +'<td style="padding:4px 6px;text-align:center"><span style="background:#E6FAF4;color:#00C48C;padding:1px 7px;border-radius:10px;font-weight:700">'+d.e+'</span></td>'
+        +'<td style="padding:4px 6px;text-align:center;font-weight:700;color:'+(pctM>=80?'#00C48C':pctM>=50?'#FF9500':'#FF4D6A')+'">'+pctM+'%</td>'
+        +'<td style="padding:4px 6px;text-align:center;color:#FF4D6A;font-weight:700">'+d.at+'</td></tr>';
+    }).join('');
+
+    // ── docs pendentes mais frequentes
+    const docsCount = {};
+    pendAll.forEach(r=>{ if(r.docsPendentes){ r.docsPendentes.split(/[,;]/).map(s=>s.trim()).filter(Boolean).forEach(d=>{ docsCount[d]=(docsCount[d]||0)+1; }); } });
+    const topDocs = Object.entries(docsCount).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const docsHtml = topDocs.length ? topDocs.map(([doc,cnt])=>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px dashed var(--gray-200);font-size:11.5px">'
+      +'<span style="color:var(--gray-700)">'+doc+'</span>'
+      +'<span style="background:#FFF5E8;color:#FF9500;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px">'+cnt+'x</span></div>'
+    ).join('') : '<p style="font-size:11px;color:var(--gray-400);margin:0">Nenhum doc pendente</p>';
+
+    // ── últimos 3 casos enviados
+    const ultimos = [...envAll].sort((a,b)=>(b.finalizacaoRH||'').localeCompare(a.finalizacaoRH||'')).slice(0,3);
+    const ultimosHtml = ultimos.length ? ultimos.map(r=>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--gray-200);font-size:11px">'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">'+r.nome+'</div>'
+        +'<div style="color:var(--blue-mid);font-size:10px;margin-top:1px">📅 Início: <strong>'+fmtDate(r.inicioContrato)+'</strong></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;margin-left:6px">'
+        +'<span class="badge '+(r.status==='No Prazo'?'badge-green':'badge-red')+'" style="font-size:10px">'+r.status+'</span>'
+        +'<button onclick="toggleAvisado(\''+r._id+'\')" style="background:'+(r.avisado?'#E6FAF4':'var(--gray-100)')+';border:1px solid '+(r.avisado?'var(--green)':'var(--gray-200)')+';border-radius:20px;padding:2px 8px;cursor:pointer;font-size:10px;font-weight:700;color:'+(r.avisado?'var(--green)':'var(--gray-400)')+'">'
+          +(r.avisado?'✅ Avisado':'○ Avisar')+'</button>'
+      +'</div></div>'
+    ).join('') : '<p style="font-size:11px;color:var(--gray-400);margin:0">Nenhum enviado ainda</p>';
+
+    // ── barra de cor por performance
+    const perfColor = pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)';
+    const perfLabel = pct>=80?'Ótima':'Atenção';
+
+    return '<div class="perf-card" style="min-width:0">'
+      // ── cabeçalho
+      +'<div class="perf-header" style="margin-bottom:10px">'
+        +'<div class="perf-avatar" style="background:'+color+';width:46px;height:46px;font-size:16px">'+initials(resp)+'</div>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div class="perf-name" style="font-size:14px">'+resp+'</div>'
+          +'<div class="perf-role">Assistente de Documentação</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+          +'<div style="font-size:22px;font-weight:900;color:'+perfColor+'">'+pct+'%</div>'
+          +'<div style="font-size:10px;color:var(--gray-400);font-weight:700">PONTUALIDADE</div>'
+        +'</div>'
+      +'</div>'
+      // ── KPIs principais (5 itens)
+      +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;background:var(--gray-100);border-radius:8px;padding:10px 6px">'
+        +'<div class="perf-kpi"><div class="perf-kpi-val" style="font-size:18px">'+total+'</div><div class="perf-kpi-lbl">Total</div></div>'
+        +'<div class="perf-kpi"><div class="perf-kpi-val" style="font-size:18px;color:var(--blue-mid)">'+pendAll.length+'</div><div class="perf-kpi-lbl">Pend.</div></div>'
+        +'<div class="perf-kpi"><div class="perf-kpi-val" style="font-size:18px;color:var(--gray-600)">'+envAll.length+'</div><div class="perf-kpi-lbl">Env.</div></div>'
+        +'<div class="perf-kpi"><div class="perf-kpi-val" style="font-size:18px;color:var(--green)">'+prazo+'</div><div class="perf-kpi-lbl">Prazo</div></div>'
+        +'<div class="perf-kpi"><div class="perf-kpi-val" style="font-size:18px;color:var(--red)">'+atraso+'</div><div class="perf-kpi-lbl">Atraso</div></div>'
+      +'</div>'
+      // ── barra de progresso
+      +'<div style="margin-bottom:6px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;color:var(--gray-600);margin-bottom:4px">'
+          +'<span>'+pct+'% no prazo &nbsp;|&nbsp; '+pctAtraso+'% em atraso</span>'
+          +'<span style="color:'+perfColor+'">'+perfLabel+'</span>'
+        +'</div>'
+        +'<div class="progress-bar" style="height:10px">'
+          +'<div style="height:100%;border-radius:20px;width:'+pct+'%;background:linear-gradient(90deg,'+perfColor+','+perfColor+'aa);transition:width .5s"></div>'
+        +'</div>'
+      +'</div>'
+      // ── breakdown mensal
+      +(mKeys.length ? '<div style="margin-top:12px"><div style="font-size:10.5px;font-weight:800;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📅 Por Mês</div>'
+        +'<table style="width:100%;border-collapse:collapse">'
+          +'<thead><tr style="font-size:10px;color:var(--gray-400)">'
+            +'<th style="padding:3px 6px;text-align:left;font-weight:700">Mês</th>'
+            +'<th style="padding:3px 6px;text-align:center;font-weight:700">Pend.</th>'
+            +'<th style="padding:3px 6px;text-align:center;font-weight:700">Env.</th>'
+            +'<th style="padding:3px 6px;text-align:center;font-weight:700">% Pont.</th>'
+            +'<th style="padding:3px 6px;text-align:center;font-weight:700">Atraso</th>'
+          +'</tr></thead>'
+          +'<tbody>'+mesRows+'</tbody>'
+        +'</table></div>'
+      : '')
+      // ── docs pendentes frequentes
+      +(topDocs.length ? '<div style="margin-top:12px"><div style="font-size:10.5px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📄 Docs Mais Pendentes</div>'+docsHtml+'</div>' : '')
+      // ── últimos casos
+      +'<div style="margin-top:12px"><div style="font-size:10.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">🕐 Últimos Enviados</div>'+ultimosHtml+'</div>'
+    +'</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// EDIT MODAL
+// ═══════════════════════════════════════════════════════
+function openEdit(id, type) {
+  const r = DB[type].find(x=>x._id===id);
+  if (!r) return;
+  editingId = id; editingType = type;
+  document.getElementById('modal-title').textContent = `Editar – MRH ${r.mrh}`;
+  document.getElementById('m-mrh').value = r.mrh||'';
+  document.getElementById('m-cpf').value = r.cpf||'';
+  document.getElementById('m-nome').value = r.nome||'';
+  document.getElementById('m-funcao').value = r.funcao||'';
+  document.getElementById('m-cr').value = r.cr||'';
+  document.getElementById('m-inicio').value = r.inicioContrato||'';
+  document.getElementById('m-tipo-aso').value = r.tipoAso||'ASO SIMPLES';
+  document.getElementById('m-resp').value = r.respDoc||'';
+  // dias ASO
+  const diasSalvos = r.asoDias||'2';
+  const diasEl = document.getElementById('m-aso-dias');
+  const validOpts = ['2','3','4','5','6','7'];
+  diasEl.value = validOpts.includes(diasSalvos) ? diasSalvos : 'mais';
+  document.getElementById('m-aso-obs').value = r.asoObs||'';
+  document.getElementById('aso-obs-row').style.display = diasEl.value==='mais'?'flex':'none';
+  updateAsoTip();
+  buildDocsChecklist(r.docsPendentes||'');
+  document.getElementById('m-docs').value = r.docsPendentes||'';
+  document.getElementById('m-admissao').value = r.admissao||'';
+  document.getElementById('m-finalizacao').value = r.finalizacaoRH||'';
+  document.getElementById('m-justif').value = r.justificativa||'';
+  const isAtraso = r.status === 'Em Atraso';
+  document.getElementById('justif-group').style.display = isAtraso ? 'block' : 'none';
+  // pendente em atraso (sem finalizacaoRH e prazo vencido)
+  const isPendAtraso = type==='pendentes' && venceEm(r.inicioContrato,r.tipoAso) && venceEm(r.inicioContrato,r.tipoAso) < today();
+  document.getElementById('justif-pend-group').style.display = isPendAtraso ? 'block' : 'none';
+  document.getElementById('m-justif-pend').value = r.justificativaPend||'';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); editingId=null; }
+async function saveEdit() {
+  const r = DB[editingType].find(x=>x._id===editingId);
+  if (!r) return;
+  if (r.status === 'Em Atraso' && !document.getElementById('m-justif').value.trim()) {
+    toast('Justificativa obrigatória para MRH em atraso!', 'error'); return;
+  }
+  r.cpf = document.getElementById('m-cpf').value;
+  r.nome = document.getElementById('m-nome').value;
+  r.funcao = document.getElementById('m-funcao').value;
+  r.cr = document.getElementById('m-cr').value;
+  r.inicioContrato = document.getElementById('m-inicio').value;
+  r.tipoAso = document.getElementById('m-tipo-aso').value;
+  const diasEl = document.getElementById('m-aso-dias');
+  r.asoDias = diasEl.value;
+  r.asoObs = document.getElementById('m-aso-obs').value;
+  r.aso = diasEl.value === '2' ? 'OK' : 'Pendente';
+  r.respDoc = document.getElementById('m-resp').value;
+  r.docsPendentes = document.getElementById('m-docs').value;
+  r.admissao = document.getElementById('m-admissao').value;
+  r.finalizacaoRH = document.getElementById('m-finalizacao').value;
+  r.justificativa = document.getElementById('m-justif').value;
+  r.justificativaPend = document.getElementById('m-justif-pend').value;
+  if (r.finalizacaoRH) r.status = calcStatus(r.inicioContrato, r.finalizacaoRH) || r.status;
+  try {
+    if (editingType === 'pendentes') await dbUpdatePendente(r);
+    else await dbUpdateEnviado(r);
+    closeModal();
+    filterTable(editingType);
+    renderDashboard();
+    toast('Alterações salvas com sucesso!', 'success');
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════════════════════
+function openDetail(id, type) {
+  const r = DB[type].find(x=>x._id===id);
+  if (!r) return;
+  document.getElementById('dp-nome').textContent = r.nome || r.mrh;
+  document.getElementById('dp-sub').textContent = `MRH: ${r.mrh} · CPF: ${r.cpf||'–'}`;
+  const body = document.getElementById('dp-body');
+  const status = r.status ? `<span class="badge ${r.status==='No Prazo'?'badge-green':'badge-red'}">${r.status}</span>` : '–';
+  const docs = r.docsPendentes ? r.docsPendentes.split(/[,;]/).filter(Boolean).map(d=>`<div style="padding:4px 0;border-bottom:1px dashed var(--gray-200);font-size:12.5px">• ${d.trim()}</div>`).join('') : '–';
+  body.innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">Identificação</div>
+      <div class="detail-row"><span class="detail-key">MRH</span><span class="detail-val"><strong>${r.mrh||'–'}</strong></span></div>
+      <div class="detail-row"><span class="detail-key">CPF</span><span class="detail-val">${r.cpf||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">Nome</span><span class="detail-val">${r.nome||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">Função</span><span class="detail-val">${r.funcao||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">CR / Contrato</span><span class="detail-val">${r.cr||'–'}</span></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Processo</div>
+      <div class="detail-row"><span class="detail-key">Início Contrato</span><span class="detail-val">${fmtDate(r.inicioContrato)}</span></div>
+      <div class="detail-row"><span class="detail-key">Prazo ASO</span><span class="detail-val">${r.tipoAso||'–'} (${prazoASO(r.tipoAso)} dias)</span></div>
+      <div class="detail-row"><span class="detail-key">Vencimento</span><span class="detail-val">${fmtDate(venceEm(r.inicioContrato,r.tipoAso))}</span></div>
+      <div class="detail-row"><span class="detail-key">Gerente</span><span class="detail-val">${r.gerente||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">Recrutador</span><span class="detail-val">${r.recrutador||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">WhatsApp</span><span class="detail-val">${r.whatsapp||'–'}</span></div>
+    </div>
+    ${r.admissao||r.finalizacaoRH ? `<div class="detail-section">
+      <div class="detail-section-title">Admissão & RH</div>
+      <div class="detail-row"><span class="detail-key">Admissão</span><span class="detail-val">${fmtDate(r.admissao)}</span></div>
+      <div class="detail-row"><span class="detail-key">Finalização RH</span><span class="detail-val">${fmtDate(r.finalizacaoRH)}</span></div>
+      <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val">${status}</span></div>
+      ${r.justificativa?`<div class="detail-row"><span class="detail-key">Justificativa</span><span class="detail-val" style="font-style:italic;color:var(--red)">${r.justificativa}</span></div>`:''}
+    </div>`:``}
+    <div class="detail-section">
+      <div class="detail-section-title">Documentação</div>
+      <div class="detail-row"><span class="detail-key">Responsável</span><span class="detail-val">${r.respDoc||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">ASO</span><span class="detail-val"><span class="badge ${r.aso==='OK'?'badge-green':'badge-orange'}">${r.aso||'–'}</span></span></div>
+      <div style="margin-top:8px"><div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:6px">DOCUMENTOS PENDENTES</div>${docs}</div>
+    </div>`;
+  document.getElementById('detail-panel').classList.add('open');
+}
+function closeDetail() { document.getElementById('detail-panel').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const pRows = DB.pendentes.map(r=>({ MRH:r.mrh,Nome:r.nome,CPF:r.cpf,Função:r.funcao,'CR/Contrato':r.cr,'Início Contrato':r.inicioContrato,Gerente:r.gerente,Recrutador:r.recrutador,ASO:r.aso,'Tipo ASO':r.tipoAso,'Resp. Doc.':r.respDoc,'Docs Pendentes':r.docsPendentes }));
+  const eRows = DB.enviados.map(r=>({ MRH:r.mrh,Nome:r.nome,CPF:r.cpf,Função:r.funcao,'CR/Contrato':r.cr,'Início Contrato':r.inicioContrato,Admissão:r.admissao,'Finalização RH':r.finalizacaoRH,'Resp. Doc.':r.respDoc,Status:r.status,Justificativa:r.justificativa }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pRows), 'Pendentes');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(eRows), 'Enviados');
+  XLSX.writeFile(wb, `GPS_GD_${today()}.xlsx`);
+  toast('Planilha exportada com sucesso!', 'success');
+}
+
+function exportPDF() {
+  const win = window.open('', '_blank');
+  const t = today();
+  const noPrazo  = DB.enviados.filter(r=>r.status==='No Prazo').length;
+  const emAtraso = DB.enviados.filter(r=>r.status==='Em Atraso').length;
+  const totalMRH = DB.pendentes.length + DB.enviados.length;
+  const pct = totalMRH>0 ? Math.round(noPrazo*100/totalMRH) : 0;
+  const pctBar = pct;
+
+  // ── por assistente
+  const assisMap = {};
+  [...DB.pendentes,...DB.enviados].forEach(r=>{ if(r.respDoc){ if(!assisMap[r.respDoc]) assisMap[r.respDoc]={pend:0,env:0,prazo:0,atraso:0}; if(DB.pendentes.includes(r)) assisMap[r.respDoc].pend++; else { assisMap[r.respDoc].env++; if(r.status==='No Prazo') assisMap[r.respDoc].prazo++; else if(r.status==='Em Atraso') assisMap[r.respDoc].atraso++; } } });
+  const assisRows = Object.entries(assisMap).sort((a,b)=>(b[1].env+b[1].pend)-(a[1].env+a[1].pend)).map(([nome,d])=>{
+    const pp = d.env>0 ? Math.round(d.prazo*100/d.env) : 0;
+    const cor = pp>=80?'#00C48C':pp>=50?'#FF9500':'#FF4D6A';
+    return '<tr><td>'+nome+'</td><td style="text-align:center">'+d.pend+'</td><td style="text-align:center">'+d.env+'</td>'
+      +'<td style="text-align:center"><b style="color:'+cor+'">'+pp+'%</b></td>'
+      +'<td style="text-align:center"><span class="bg">'+d.prazo+'</span></td>'
+      +'<td style="text-align:center"><span class="br">'+d.atraso+'</span></td></tr>';
+  }).join('');
+
+  const pendRows = DB.pendentes.map(r=>{
+    const docs = r.docsPendentes ? r.docsPendentes.split(/[,;]/).filter(Boolean).map(d=>'<li>'+d.trim()+'</li>').join('') : '<li style="color:#9FAEC3">Nenhum</li>';
+    return '<tr><td><b>'+r.mrh+'</b></td><td>'+r.nome+'</td><td>'+r.funcao+'</td><td>'+r.cr+'</td><td>'+fmtDate(r.inicioContrato)+'</td><td>'+r.respDoc+'</td><td><span class="'+(r.aso==='OK'?'bg':'bo')+'">'+r.aso+'</span></td><td><ul style="margin:0;padding-left:14px;font-size:10px">'+docs+'</ul></td></tr>';
+  }).join('');
+
+  const envRows = DB.enviados.map(r=>{
+    const just = r.justificativa ? '<br><i style="font-size:10px;color:#FF4D6A">'+r.justificativa+'</i>' : '';
+    return '<tr><td><b>'+r.mrh+'</b></td><td>'+r.nome+'</td><td>'+r.funcao+'</td><td>'+r.cr+'</td><td>'+fmtDate(r.inicioContrato)+'</td><td>'+fmtDate(r.finalizacaoRH)+'</td><td>'+r.respDoc+'</td><td><span class="'+(r.status==='No Prazo'?'bg':'br')+'">'+r.status+'</span>'+just+'</td></tr>';
+  }).join('');
+
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatorio GPS G&D - '+fmtDate(t)+'</title>'
+  +'<style>'
+  +'*{box-sizing:border-box;margin:0;padding:0}'
+  +'body{font-family:Segoe UI,system-ui,sans-serif;color:#2D3B52;background:#fff;font-size:12px}'
+  +'@page{margin:18mm 14mm;size:A4 landscape}'
+  +'.page-break{page-break-before:always}'
+
+  // header topo
+  +'.hdr{background:linear-gradient(135deg,#0A2463,#1E4DB7);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-radius:0 0 10px 10px}'
+  +'.hdr-logo{display:flex;align-items:center;gap:14px}'
+  +'.hdr-badge{background:rgba(255,255,255,.2);width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;border:2px solid rgba(255,255,255,.35)}'
+  +'.hdr-title{font-size:20px;font-weight:800;letter-spacing:.3px}'
+  +'.hdr-sub{font-size:11px;opacity:.75;margin-top:2px}'
+  +'.hdr-right{text-align:right;font-size:11px;opacity:.8}'
+
+  // kpi strip
+  +'.kpi-strip{display:flex;gap:10px;margin-bottom:20px}'
+  +'.kpi{flex:1;background:#EEF4FF;border-radius:8px;padding:12px 14px;text-align:center;border-left:4px solid #3A86FF}'
+  +'.kpi.green{background:#E6FAF4;border-color:#00C48C}'
+  +'.kpi.red{background:#FFF0F2;border-color:#FF4D6A}'
+  +'.kpi.orange{background:#FFF5E8;border-color:#FF9500}'
+  +'.kpi-v{font-size:26px;font-weight:900;color:#0A2463;line-height:1}'
+  +'.kpi.green .kpi-v{color:#00A87A}'
+  +'.kpi.red .kpi-v{color:#FF4D6A}'
+  +'.kpi.orange .kpi-v{color:#E07800}'
+  +'.kpi-l{font-size:9.5px;color:#5A6E8C;font-weight:700;text-transform:uppercase;margin-top:5px;letter-spacing:.5px}'
+
+  // sla bar
+  +'.sla-wrap{background:#EEF4FF;border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:18px}'
+  +'.sla-pct{font-size:36px;font-weight:900;color:#0A2463;min-width:72px}'
+  +'.sla-bar-wrap{flex:1}'
+  +'.sla-bar-label{font-size:10px;font-weight:700;color:#5A6E8C;margin-bottom:5px;text-transform:uppercase}'
+  +'.sla-bar-track{height:14px;background:#D6E8FF;border-radius:20px;overflow:hidden}'
+  +'.sla-bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#00C48C,#1E4DB7);transition:width .5s}'
+  +'.sla-note{font-size:11px;color:#5A6E8C;max-width:260px;line-height:1.5}'
+
+  // section titles
+  +'h2{font-size:14px;font-weight:800;color:#0A2463;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid #3A86FF;display:flex;align-items:center;gap:8px}'
+  +'h2 .count{background:#EEF4FF;color:#1E4DB7;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700}'
+
+  // tables
+  +'table{width:100%;border-collapse:collapse;font-size:11.5px}'
+  +'thead tr{background:#0A2463}'
+  +'thead th{color:#fff;padding:8px 10px;font-size:10.5px;font-weight:700;text-align:left;letter-spacing:.3px}'
+  +'tbody tr:nth-child(even){background:#F8FAFF}'
+  +'tbody tr:hover{background:#EEF4FF}'
+  +'td{padding:7px 10px;border-bottom:1px solid #E9EDF5;vertical-align:top}'
+  +'td b{color:#0A2463}'
+
+  // badges
+  +'.bg{background:#E6FAF4;color:#00A87A;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}'
+  +'.br{background:#FFF0F2;color:#FF4D6A;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}'
+  +'.bo{background:#FFF5E8;color:#E07800;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}'
+
+  // footer
+  +'.footer{margin-top:28px;padding-top:10px;border-top:1px solid #E9EDF5;display:flex;justify-content:space-between;color:#9FAEC3;font-size:10px}'
+  +'</style></head><body>'
+
+  // ── HEADER
+  +'<div class="hdr">'
+    +'<div class="hdr-logo">'
+      +'<div class="hdr-badge">GPS</div>'
+      +'<div><div class="hdr-title">GRUPO GPS — Gestão & Documentação</div><div class="hdr-sub">Sistema de Controle de MRHs e Admissões</div></div>'
+    +'</div>'
+    +'<div class="hdr-right">Relatório gerado em<br><b style="font-size:13px;color:#fff">'+fmtDate(t)+'</b></div>'
+  +'</div>'
+
+  // ── KPI STRIP
+  +'<div class="kpi-strip">'
+    +'<div class="kpi"><div class="kpi-v">'+totalMRH+'</div><div class="kpi-l">Total MRHs</div></div>'
+    +'<div class="kpi orange"><div class="kpi-v">'+DB.pendentes.length+'</div><div class="kpi-l">Pendentes</div></div>'
+    +'<div class="kpi"><div class="kpi-v">'+DB.enviados.length+'</div><div class="kpi-l">Enviados</div></div>'
+    +'<div class="kpi green"><div class="kpi-v">'+noPrazo+'</div><div class="kpi-l">No Prazo</div></div>'
+    +'<div class="kpi red"><div class="kpi-v">'+emAtraso+'</div><div class="kpi-l">Em Atraso</div></div>'
+  +'</div>'
+
+  // ── SLA BAR
+  +'<div class="sla-wrap">'
+    +'<div class="sla-pct">'+pct+'%</div>'
+    +'<div class="sla-bar-wrap">'
+      +'<div class="sla-bar-label">Indicador Global de Pontualidade (No Prazo / Total Enviados)</div>'
+      +'<div class="sla-bar-track"><div class="sla-bar-fill" style="width:'+pctBar+'%"></div></div>'
+    +'</div>'
+    +'<div class="sla-note">'+noPrazo+' admissões finalizadas no prazo de '+DB.enviados.length+' enviadas. '+emAtraso+' em atraso. '+DB.pendentes.length+' aguardando envio.</div>'
+  +'</div>'
+
+  // ── PERFORMANCE POR ASSISTENTE
+  +'<h2>👥 Performance por Assistente <span class="count">'+Object.keys(assisMap).length+' assistentes</span></h2>'
+  +'<table><thead><tr><th>Assistente</th><th style="text-align:center">Pendentes</th><th style="text-align:center">Enviados</th><th style="text-align:center">% Pontualidade</th><th style="text-align:center">No Prazo</th><th style="text-align:center">Em Atraso</th></tr></thead>'
+  +'<tbody>'+assisRows+'</tbody></table>'
+
+  // ── PENDENTES (nova página)
+  +'<div class="page-break"></div>'
+  +'<h2>📋 Candidatos Pendentes <span class="count">'+DB.pendentes.length+'</span></h2>'
+  +(DB.pendentes.length ? '<table><thead><tr><th>MRH</th><th>Nome</th><th>Função</th><th>CR</th><th>Início</th><th>Resp. Doc.</th><th>ASO</th><th>Docs Pendentes</th></tr></thead><tbody>'+pendRows+'</tbody></table>' : '<p style="color:#9FAEC3;padding:20px;text-align:center">Nenhum pendente</p>')
+
+  // ── ENVIADOS (nova página)
+  +'<div class="page-break"></div>'
+  +'<h2>📤 Candidatos Enviados / Admitidos <span class="count">'+DB.enviados.length+'</span></h2>'
+  +(DB.enviados.length ? '<table><thead><tr><th>MRH</th><th>Nome</th><th>Função</th><th>CR</th><th>Início</th><th>Final. RH</th><th>Resp. Doc.</th><th>Status</th></tr></thead><tbody>'+envRows+'</tbody></table>' : '<p style="color:#9FAEC3;padding:20px;text-align:center">Nenhum enviado</p>')
+
+  // ── FOOTER
+  +'<div class="footer"><span>GRUPO GPS — Sistema G&D v2.0</span><span>Relatório confidencial — uso interno</span><span>Gerado em '+fmtDate(t)+'</span></div>'
+  +'</body></html>';
+
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>{ win.print(); }, 600);
+  toast('PDF gerado com sucesso! Use Ctrl+P para salvar.', 'success');
+}
+
+// ═══════════════════════════════════════════════════════
+// APAGAR DADOS
+// ═══════════════════════════════════════════════════════
+function confirmClearAll() {
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+async function clearAllData() {
+  try {
+    await dbClearAll();
+    DB.pendentes = [];
+    DB.enviados = [];
+    DB.importLog = [];
+    document.getElementById('confirm-overlay').classList.remove('open');
+    renderDashboard();
+    populateFilters();
+    filterTable('pendentes');
+    filterTable('enviados');
+    renderImportLog();
+    toast('Todos os dados foram apagados.', 'warning');
+  } catch(e) {
+    toast('Erro ao apagar dados: ' + e.message, 'error');
+  }
+}
+
+// ─── ASO TIP
+function updateAsoTip() {
+  const tipo = document.getElementById('m-tipo-aso')?.value || '';
+  const dias = document.getElementById('m-aso-dias')?.value || '2';
+  const obsRow = document.getElementById('aso-obs-row');
+  const tip = document.getElementById('m-aso-tip');
+  if(obsRow) obsRow.style.display = dias==='mais'?'flex':'none';
+  const labels = {'ASO SIMPLES':'Exame admissional simples','ASO COMPLEMENTAR':'Exame complementar (hemograma, audiometria etc.)'};
+  const diasLabel = {'2':'2 dias úteis','3':'3 dias úteis','4':'4 dias úteis','5':'5 dias úteis','6':'6 dias úteis','7':'7 dias úteis','mais':'Mais de 7 dias'};
+  if(tip) tip.textContent = (labels[tipo]||tipo) + ' · ' + (diasLabel[dias]||dias);
+}
+
+// ─── TOGGLE AVISADO
+async function toggleAvisado(id) {
+  const r = DB.enviados.find(x=>x._id===id);
+  if(!r) return;
+  r.avisado = !r.avisado;
+  try {
+    await dbToggleAvisado(id, r.avisado);
+    filterTable('enviados');
+    toast(r.avisado ? '✅ Candidato marcado como avisado!' : 'Aviso removido.', r.avisado?'success':'info');
+  } catch(e) {
+    r.avisado = !r.avisado; // reverter
+    toast('Erro ao atualizar: ' + e.message, 'error');
+  }
+}
+const DOCS_GERAIS = [
+  'Foto para o crachá','RG (frente e verso)','CPF','Comprovante de residência',
+  'Título de eleitor','Carteira de reservista','Número do PIS',
+  'Dados de conta corrente','Comprovante de escolaridade',
+  'Carteira de trabalho','Comprovante de vacinação COVID-19','Cartão de assinatura'
+];
+const DOCS_VIGILANTE = [
+  'CNV','Declaração de pessoa','Certificado de vigilante','Reciclagem'
+];
+
+function buildDocsChecklist(selectedDocs) {
+  const sel = selectedDocs ? selectedDocs.split(/[,;]/).map(s=>s.trim().toLowerCase()) : [];
+  function renderGroup(docs, gridId) {
+    const el = document.getElementById(gridId);
+    if (!el) return;
+    el.innerHTML = docs.map((doc,i) => {
+      const id = gridId+'_'+i;
+      const checked = sel.some(s=>s===doc.toLowerCase()) ? 'checked' : '';
+      return '<div class="doc-check-item"><input type="checkbox" id="'+id+'" value="'+doc+'" '+checked+' onchange="syncDocsField()"><label for="'+id+'">'+doc+'</label></div>';
+    }).join('');
+  }
+  renderGroup(DOCS_GERAIS, 'docs-grid-geral');
+  renderGroup(DOCS_VIGILANTE, 'docs-grid-vig');
+}
+
+function syncDocsField() {
+  const all = document.querySelectorAll('#docs-grid-geral input:checked, #docs-grid-vig input:checked');
+  document.getElementById('m-docs').value = Array.from(all).map(cb=>cb.value).join(', ');
+}
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = type==='success'?'✅ '+msg : type==='error'?'❌ '+msg : type==='warning'?'⚠️ '+msg : 'ℹ️ '+msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity 0.4s'; setTimeout(()=>el.remove(),400); }, 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+// DEMO DATA (seed if empty)
+// ═══════════════════════════════════════════════════════
+function seedDemo() {
+  if (DB.pendentes.length || DB.enviados.length) { renderDashboard(); populateFilters(); filterTable('pendentes'); filterTable('enviados'); renderImportLog(); return; }
+  const funcs = ['Auxiliar Administrativo','Analista RH','Supervisor','Coordenador','Assistente Operacional','Motorista','Técnico de Campo'];
+  const crs = ['CR-001-SP','CR-002-RJ','CR-003-MG','CR-004-BA','CR-005-RS'];
+  const gerentes = ['Carlos Lima','Ana Souza','Roberto Melo'];
+  const recrutadores = ['Tatiana Costa','Marcos Alves'];
+  const resps = ['Fernanda Oliveira','Bruno Santos','Carla Mendes','Diego Ferreira'];
+  const docsOpts = ['RG','CPF','Comprovante de Residência','Certidão de Nascimento','Carteira de Trabalho','Diploma','Foto 3x4','ASO'];
+  const today_ = today();
+
+  for (let i=1; i<=30; i++) {
+    const d = new Date(); d.setDate(d.getDate() - Math.floor(Math.random()*60));
+    const inicio = d.toISOString().split('T')[0];
+    const docCount = Math.floor(Math.random()*4)+1;
+    const docs = docsOpts.sort(()=>Math.random()-.5).slice(0,docCount).join(', ');
+    DB.pendentes.push({
+      mrh: `MRH-2025-${String(i).padStart(3,'0')}`,
+      funcao: funcs[i%funcs.length], cr: crs[i%crs.length],
+      limiteRecrutamento: null, inicioContrato: inicio,
+      gerente: gerentes[i%gerentes.length], recrutador: recrutadores[i%2],
+      cpf: String(Math.random()).slice(2,13), nome: `Candidato Teste ${i}`,
+      whatsapp: `11 9${String(Math.random()).slice(2,10)}`,
+      aso: Math.random()>.3?'OK':'Pendente',
+      tipoAso: Math.random()>.4?'ASO SIMPLES':'ASO COMPLEMENTAR',
+      respDoc: resps[i%resps.length], docsPendentes: docs,
+      _id: uid(), _importedAt: today_, justificativa: ''
+    });
+  }
+  for (let i=1; i<=20; i++) {
+    const d = new Date(); d.setDate(d.getDate() - Math.floor(Math.random()*90));
+    const inicio = d.toISOString().split('T')[0];
+    const fd = new Date(d); fd.setDate(fd.getDate() + (Math.random()>.5?-3:3));
+    const fin = fd.toISOString().split('T')[0];
+    const status = calcStatus(inicio, fin) || 'No Prazo';
+    DB.enviados.push({
+      mrh: `MRH-2024-${String(i).padStart(3,'0')}`,
+      funcao: funcs[i%funcs.length], cr: crs[i%crs.length],
+      inicioContrato: inicio, admissao: inicio, finalizacaoRH: fin,
+      gerente: gerentes[i%3], recrutador: recrutadores[i%2],
+      cpf: String(Math.random()).slice(2,13), nome: `Colaborador GPS ${i}`,
+      whatsapp: '', aso: 'OK', tipoAso: Math.random()>.4?'ASO SIMPLES':'ASO COMPLEMENTAR',
+      respDoc: resps[i%resps.length], docsPendentes: '',
+      status, _id: uid(), _importedAt: today_,
+      justificativa: status==='Em Atraso'?'Documentação incompleta recebida com atraso pelo candidato.':''
+    });
+  }
+  saveDB();
+  renderDashboard();
+  populateFilters();
+  filterTable('pendentes');
+  filterTable('enviados');
+  renderImportLog();
+  toast('Dados de demonstração carregados!', 'info');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadDB();
+  renderDashboard();
+  populateFilters();
+  filterTable('pendentes');
+  filterTable('enviados');
+  renderImportLog();
+});
+</script>
+</body>
+</html>
