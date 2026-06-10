@@ -369,7 +369,7 @@
 <!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-badge">GP</div>
+    <div class="logo-badge">GPS</div>
     <h2>Gestão & Documentação</h2>
     <p>GRUPO GPS</p>
   </div>
@@ -600,6 +600,15 @@
           </select>
         </div>
         <div class="filter-group">
+          <span class="filter-label">Filtro Rápido</span>
+          <div class="period-btns">
+            <button class="period-btn active" id="qf-all"    onclick="setQuickFilter('all',this)">Todos</button>
+            <button class="period-btn"         id="qf-atraso" onclick="setQuickFilter('atraso',this)">⚠️ Em Atraso</button>
+            <button class="period-btn"         id="qf-hoje"   onclick="setQuickFilter('hoje',this)">🔴 Vence Hoje</button>
+            <button class="period-btn"         id="qf-7d"     onclick="setQuickFilter('7d',this)">🟡 Vence em 7 dias</button>
+          </div>
+        </div>
+        <div class="filter-group">
           <span class="filter-label">Período</span>
           <div class="period-btns">
             <button class="period-btn active" onclick="setPeriod('enviados','all',this)">Todos</button>
@@ -700,7 +709,11 @@
     <div class="view" id="view-performance">
       <div class="section-header">
         <div class="section-title"><div class="section-title-line"></div>Performance do Time – Visão Individual</div>
-        <div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div style="position:relative">
+            <input type="text" id="filt-perf-busca" placeholder="🔍 Buscar assistente..." oninput="renderPerformance()"
+              style="padding:7px 12px 7px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;width:220px;outline:none;background:var(--surface-1,#fff)">
+          </div>
           <select class="filter-select" id="filt-perf-analista" onchange="renderPerformance()"><option value="">Todos os Assistentes</option></select>
         </div>
       </div>
@@ -842,6 +855,7 @@ let DB = {
   importLog: []
 };
 let periods = { pendentes: 'all', enviados: 'all' };
+let _quickFilter = 'all';
 let pages = { pendentes: 1, enviados: 1 };
 const PAGE_SIZE = 20;
 let editingId = null;
@@ -1380,6 +1394,13 @@ function getDateRange(period, type) {
   return null;
 }
 
+function setQuickFilter(mode, btn) {
+  _quickFilter = mode;
+  document.querySelectorAll('#qf-all,#qf-atraso,#qf-hoje,#qf-7d').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  filterTable('enviados');
+}
+
 function filterTable(type) {
   const prefix = type === 'pendentes' ? 'p' : 'e';
   const analista = document.getElementById(`filt-${prefix}-analista`)?.value || '';
@@ -1388,6 +1409,9 @@ function filterTable(type) {
   const nome  = normalize(document.getElementById(`filt-${prefix}-nome`)?.value || '');
   const status = document.getElementById('filt-e-status')?.value || '';
   const range = getDateRange(periods[type], type);
+
+  const todayStr = today();
+  const in7dStr  = (() => { const d = new Date(); d.setDate(d.getDate()+7); return d.toISOString().slice(0,10); })();
 
   let data = DB[type].filter(r => {
     if (analista && r.respDoc !== analista) return false;
@@ -1398,6 +1422,13 @@ function filterTable(type) {
     if (range) {
       const d = r.inicioContrato || r._importedAt;
       if (d && (d < range.from || d > range.to)) return false;
+    }
+    // ── filtro rápido (só para enviados)
+    if (type === 'enviados' && _quickFilter !== 'all') {
+      const admissao = r.admissao || r.inicioContrato || '';
+      if (_quickFilter === 'atraso' && r.status !== 'Em Atraso') return false;
+      if (_quickFilter === 'hoje'   && admissao !== todayStr) return false;
+      if (_quickFilter === '7d'     && (admissao < todayStr || admissao > in7dStr)) return false;
     }
     return true;
   });
@@ -1810,8 +1841,13 @@ function renderCharts() {
 function renderPerformance() {
   populateFilters();
   const filterAss = document.getElementById('filt-perf-analista')?.value || '';
+  const busca = (document.getElementById('filt-perf-busca')?.value || '').toLowerCase().trim();
   const allResps = [...new Set([...DB.pendentes,...DB.enviados].map(r=>r.respDoc).filter(Boolean))].sort();
-  const filtered = filterAss ? [filterAss] : allResps;
+  const filtered = allResps.filter(r => {
+    if (filterAss && r !== filterAss) return false;
+    if (busca && !r.toLowerCase().includes(busca)) return false;
+    return true;
+  });
 
   const grid = document.getElementById('perf-grid');
   if (!filtered.length) {
@@ -1844,30 +1880,28 @@ function renderPerformance() {
         +'<td style="padding:4px 6px;text-align:center;color:#FF4D6A;font-weight:700">'+d.at+'</td></tr>';
     }).join('');
 
-    // ── docs pendentes mais frequentes
-    const docsCount = {};
-    pendAll.forEach(r=>{ if(r.docsPendentes){ r.docsPendentes.split(/[,;]/).map(s=>s.trim()).filter(Boolean).forEach(d=>{ docsCount[d]=(docsCount[d]||0)+1; }); } });
-    const topDocs = Object.entries(docsCount).sort((a,b)=>b[1]-a[1]).slice(0,4);
-    const docsHtml = topDocs.length ? topDocs.map(([doc,cnt])=>
-      '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px dashed var(--gray-200);font-size:11.5px">'
-      +'<span style="color:var(--gray-700)">'+doc+'</span>'
-      +'<span style="background:#FFF5E8;color:#FF9500;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px">'+cnt+'x</span></div>'
-    ).join('') : '<p style="font-size:11px;color:var(--gray-400);margin:0">Nenhum doc pendente</p>';
-
-    // ── últimos 3 casos enviados
-    const ultimos = [...envAll].sort((a,b)=>(b.finalizacaoRH||'').localeCompare(a.finalizacaoRH||'')).slice(0,3);
+    // ── últimos 5 enviados
+    const ultimos = [...envAll].sort((a,b)=>(b.admissao||b.finalizacaoRH||'').localeCompare(a.admissao||a.finalizacaoRH||'')).slice(0,5);
     const ultimosHtml = ultimos.length ? ultimos.map(r=>
-      '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--gray-200);font-size:11px">'
-      +'<div style="flex:1;min-width:0">'
-        +'<div style="color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">'+r.nome+'</div>'
-        +'<div style="color:var(--blue-mid);font-size:10px;margin-top:1px">📅 Início: <strong>'+fmtDate(r.inicioContrato)+'</strong></div>'
+      '<div style="padding:6px 0;border-bottom:1px dashed var(--gray-200)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:6px">'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-weight:700;font-size:11.5px;color:var(--gray-800);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.nome+'</div>'
+          +'<div style="font-size:10.5px;color:var(--gray-500);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">'
+            +'<span style="color:var(--blue-mid);font-weight:600">MRH '+r.mrh+'</span>'
+            +'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px" title="'+r.cr+'">'+r.cr+'</span>'
+            +(r.funcao ? '&nbsp;·&nbsp;<span style="color:var(--gray-400);font-size:10px">'+r.funcao+'</span>' : '')
+          +'</div>'
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">'
+          +'<span class="badge '+(r.status==='No Prazo'?'badge-green':'badge-red')+'" style="font-size:10px">'+r.status+'</span>'
+          +'<span style="font-size:10px;color:var(--gray-500)">📅 '+(r.admissao ? fmtDate(r.admissao) : fmtDate(r.inicioContrato)||'–')+'</span>'
+        +'</div>'
       +'</div>'
-      +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;margin-left:6px">'
-        +'<span class="badge '+(r.status==='No Prazo'?'badge-green':'badge-red')+'" style="font-size:10px">'+r.status+'</span>'
-        +'<button onclick="toggleAvisado(\''+r._id+'\')" style="background:'+(r.avisado?'#E6FAF4':'var(--gray-100)')+';border:1px solid '+(r.avisado?'var(--green)':'var(--gray-200)')+';border-radius:20px;padding:2px 8px;cursor:pointer;font-size:10px;font-weight:700;color:'+(r.avisado?'var(--green)':'var(--gray-400)')+'">'
-          +(r.avisado?'✅ Avisado':'○ Avisar')+'</button>'
-      +'</div></div>'
+      +'</div>'
     ).join('') : '<p style="font-size:11px;color:var(--gray-400);margin:0">Nenhum enviado ainda</p>';
+
+    
 
     // ── barra de cor por performance
     const perfColor = pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)';
@@ -1917,10 +1951,9 @@ function renderPerformance() {
           +'<tbody>'+mesRows+'</tbody>'
         +'</table></div>'
       : '')
-      // ── docs pendentes frequentes
-      +(topDocs.length ? '<div style="margin-top:12px"><div style="font-size:10.5px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">📄 Docs Mais Pendentes</div>'+docsHtml+'</div>' : '')
+      // (docs pendentes removido)
       // ── últimos casos
-      +'<div style="margin-top:12px"><div style="font-size:10.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">🕐 Últimos Enviados</div>'+ultimosHtml+'</div>'
+      +'<div style="margin-top:12px"><div style="font-size:10.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">🕐 Últimas Enviadas</div>'+ultimosHtml+'</div>'
     +'</div>';
   }).join('');
 }
